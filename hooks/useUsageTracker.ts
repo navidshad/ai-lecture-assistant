@@ -27,7 +27,7 @@ export const useUsageTracker = (initialReports: UsageReport[]) => {
     modelId: string;
     usageMetadata: any;
     isFinal: boolean;
-    tag?: 'slide_conversation';
+    tag?: string;
   }) => {
     const { modelId, usageMetadata, isFinal, tag = 'slide_conversation' } = params;
 

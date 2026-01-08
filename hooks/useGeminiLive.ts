@@ -505,20 +505,6 @@ export const useGeminiLive = ({
             
             if ((message as any).usageMetadata) {
               const usageData = (message as any).usageMetadata;
-              const promptTokens =
-                usageData.promptTokenCount ??
-                usageData.prompt_token_count ??
-                0;
-              const completionTokens =
-                (usageData.responseTokenCount ??
-                  usageData.response_token_count ??
-                  usageData.candidatesTokenCount ??
-                  usageData.candidates_token_count ??
-                  0) + (usageData.thoughtsTokenCount ?? 0);
-              const totalTokens =
-                usageData.totalTokenCount ?? usageData.total_token_count ?? 0;
-
-              const isFinal = (message as any).serverContent?.turnComplete === true;
 
               // Calculate incremental cost for the current AI turn
               import("../utils/costCalculator").then(
@@ -528,7 +514,7 @@ export const useGeminiLive = ({
                     modelId: selectedModel,
                     usageMetadata: usageData,
                     isFinal,
-                    tag: "slide_conversation",
+                    tag: `slide_conversation:${currentSlideIndexRef.current + 1}`,
                   });
 
                   const turnCost = calculateEstimatedCost(

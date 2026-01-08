@@ -8,6 +8,13 @@ interface UsageReportPageProps {
   onBack: () => void;
 }
 
+const TAG_LABELS: Record<string, string> = {
+  grouping: "Topic Grouping",
+  lecture_plan: "Initial Planning",
+  slide_conversation: "Live Discussion",
+  other: "Miscellaneous"
+};
+
 const UsageReportPage: React.FC<UsageReportPageProps> = ({ session, onBack }) => {
   const reports = session.usageReports || [];
 
@@ -27,11 +34,20 @@ const UsageReportPage: React.FC<UsageReportPageProps> = ({ session, onBack }) =>
     return { totalCost, totalTokens, byTag };
   }, [reports]);
 
-  const tagLabels: Record<string, string> = {
-    grouping: "Topic Grouping",
-    lecture_plan: "Initial Planning",
-    slide_conversation: "Live Discussion",
-    other: "Miscellaneous"
+  const getTagLabel = (tag: string) => {
+    if (TAG_LABELS[tag]) return TAG_LABELS[tag];
+    if (tag.startsWith('slide_conversation:')) {
+      const num = tag.split(':')[1];
+      return `Slide ${num} Discussion`;
+    }
+    return tag;
+  };
+
+  const getTagColorClass = (tag: string) => {
+    if (tag === 'lecture_plan') return 'bg-purple-500/20 text-purple-400';
+    if (tag === 'grouping') return 'bg-orange-500/20 text-orange-400';
+    if (tag.startsWith('slide_conversation')) return 'bg-blue-500/20 text-blue-400';
+    return 'bg-gray-500/20 text-gray-400';
   };
 
   return (
@@ -114,7 +130,7 @@ const UsageReportPage: React.FC<UsageReportPageProps> = ({ session, onBack }) =>
               <div key={tag} className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col justify-between">
                 <div className="flex justify-between items-start mb-4">
                   <span className="px-2 py-1 bg-white/10 rounded text-xs font-bold uppercase text-white/70">
-                    {tagLabels[tag] || tag}
+                    {getTagLabel(tag)}
                   </span>
                   <span className="text-blue-400 font-mono font-bold">
                     {formatCost(castData.cost)}
@@ -159,10 +175,8 @@ const UsageReportPage: React.FC<UsageReportPageProps> = ({ session, onBack }) =>
                       </td>
                       <td className="px-6 py-4 text-sm">
                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight
-                            ${report.tag === 'lecture_plan' ? 'bg-purple-500/20 text-purple-400' :
-                              report.tag === 'grouping' ? 'bg-orange-500/20 text-orange-400' :
-                              'bg-blue-500/20 text-blue-400'}`}>
-                           {tagLabels[report.tag || 'other']}
+                            ${getTagColorClass(report.tag || 'other')}`}>
+                           {getTagLabel(report.tag || 'other')}
                          </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-400 text-right font-mono">

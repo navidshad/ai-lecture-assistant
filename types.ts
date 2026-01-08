@@ -28,7 +28,7 @@ export interface UsageReport {
   usage: TokenUsage;
   timestamp: number;
   callType?: string; // e.g., 'plan_gen', 'live_session', 'markdown_fix'
-  tag?: 'grouping' | 'lecture_plan' | 'slide_conversation';
+  tag?: 'grouping' | 'lecture_plan' | 'slide_conversation' | string;
 }
 
 export interface LectureSession {
