@@ -24,6 +24,7 @@ import SlidesThumbStrip from "../components/Lecture/SlidesThumbStrip";
 import { useSessionPersistence } from "../hooks/useSessionPersistence";
 import GroupedSlidesThumbStrip from "../components/Lecture/GroupedSlidesThumbStrip";
 import { groupSlidesByAI } from "../services/slideGrouper";
+import { MODEL_CONFIGS } from "../constants/modelCosts.static";
 import { useLocalStorage } from "../utils/storage";
 import { useAttachments } from "../hooks/useAttachments";
 
@@ -32,12 +33,14 @@ const LOG_SOURCE = "LecturePage";
 interface LecturePageProps {
   session: LectureSession;
   onEndSession: () => void;
+  onViewReport: () => void;
   apiKey: string | null;
 }
 
 const LecturePage: React.FC<LecturePageProps> = ({
   session,
   onEndSession,
+  onViewReport,
   apiKey,
 }) => {
   const [slides, setSlides] = useState<Slide[]>(session.slides);
@@ -151,6 +154,7 @@ const LecturePage: React.FC<LecturePageProps> = ({
         const groups = await groupSlidesByAI({
           slides,
           apiKey,
+          onReportUsage: addReport,
         });
         if (!cancelled) {
           setSlideGroups(groups);
@@ -231,6 +235,7 @@ const LecturePage: React.FC<LecturePageProps> = ({
     requestExplanation,
     estimatedCost,
     reports,
+    addReport,
   } = useGeminiLive({
     slides: slides,
     generalInfo: session.generalInfo,
@@ -535,6 +540,7 @@ const LecturePage: React.FC<LecturePageProps> = ({
           currentSlide={currentSlideIndex + 1}
           totalSlides={slides.length}
           estimatedCost={estimatedCost}
+          onViewReport={onViewReport}
         />
 
         <div className="flex-1 flex flex-col relative overflow-hidden">

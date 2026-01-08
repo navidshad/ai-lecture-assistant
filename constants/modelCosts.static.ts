@@ -37,6 +37,7 @@ export const MODELS = Object.values(MODEL_REGISTRY);
 export const MODEL_CONFIGS = {
   PLAN_GENERATION: MODEL_REGISTRY["gemini-2.5-pro"].id,
   MARKDOWN_FIXER: MODEL_REGISTRY["gemini-2.0-flash-exp"].id,
+  SLIDE_GROUPING: MODEL_REGISTRY["gemini-2.0-flash-exp"].id,
 };
 
 export const DEFAULT_MODEL_COST = {

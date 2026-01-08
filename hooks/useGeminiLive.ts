@@ -109,6 +109,7 @@ export const useGeminiLive = ({
     reports,
     estimatedCost,
     trackLiveTurnUsage,
+    addReport,
   } = useUsageTracker(usageReports);
 
   // Session resumption tracking
@@ -527,6 +528,7 @@ export const useGeminiLive = ({
                     modelId: selectedModel,
                     usageMetadata: usageData,
                     isFinal,
+                    tag: "slide_conversation",
                   });
 
                   const turnCost = calculateEstimatedCost(
@@ -1024,5 +1026,6 @@ export const useGeminiLive = ({
     requestExplanation,
     estimatedCost,
     reports,
+    addReport,
   };
 };

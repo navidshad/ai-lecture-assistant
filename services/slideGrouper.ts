@@ -1,5 +1,6 @@
-import { Slide, SlideGroup } from "../types";
+import { Slide, SlideGroup, UsageReport } from "../types";
 import { getGenAI } from "./genaiClient";
+import { MODEL_CONFIGS } from "../constants/modelCosts.static";
 
 type GenerateContentResponseLike = { text: string };
 
@@ -44,11 +45,12 @@ export async function groupSlidesByAI(params: {
   slides: Slide[];
   apiKey: string | null;
   model?: string;
+  onReportUsage?: (report: UsageReport) => void;
 }): Promise<SlideGroup[]> {
-  const { slides, apiKey, model } = params;
+  const { slides, apiKey, model, onReportUsage } = params;
   if (!slides || slides.length === 0) return [];
 
-  const modelToUse = model || "gemini-2.5-pro";
+  const modelToUse = model || MODEL_CONFIGS.SLIDE_GROUPING;
   const signature =
     `${modelToUse}::` +
     slides.map((s) => `${s.pageNumber}:${s.summary || ""}`).join("|");
@@ -64,7 +66,7 @@ export async function groupSlidesByAI(params: {
   const textPart = { text: prompt };
 
   const promise: Promise<SlideGroup[]> = (async () => {
-    const response: GenerateContentResponseLike = await (
+    const response: any = await (
       ai.models.generateContent as any
     )({
       model: modelToUse,
@@ -114,6 +116,21 @@ export async function groupSlidesByAI(params: {
       groups = [
         { title: "All Slides", slideNumbers: slides.map((s) => s.pageNumber) },
       ];
+    }
+
+    const usage = response.usageMetadata;
+    if (usage && onReportUsage) {
+      onReportUsage({
+        modelId: usage.model || modelToUse,
+        usage: {
+          promptTokens: usage.promptTokenCount ?? 0,
+          completionTokens: usage.candidatesTokenCount ?? 0,
+          totalTokens: usage.totalTokenCount ?? 0,
+        },
+        timestamp: Date.now(),
+        callType: "grouping", // Keep for IndexedDB categorization if needed
+        tag: "grouping",
+      });
     }
 
     return groups;

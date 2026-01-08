@@ -125,6 +125,7 @@ Slide 2:
           },
           timestamp: Date.now(),
           callType: "plan_gen",
+          tag: "lecture_plan",
         };
 
         const { generalInfo, slideSummaries, importantSlides } =

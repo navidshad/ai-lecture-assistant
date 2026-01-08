@@ -27,8 +27,9 @@ export const useUsageTracker = (initialReports: UsageReport[]) => {
     modelId: string;
     usageMetadata: any;
     isFinal: boolean;
+    tag?: 'slide_conversation';
   }) => {
-    const { modelId, usageMetadata, isFinal } = params;
+    const { modelId, usageMetadata, isFinal, tag = 'slide_conversation' } = params;
 
     const promptTokens = usageMetadata.promptTokenCount ?? usageMetadata.prompt_token_count ?? 0;
     const completionTokens = (
@@ -52,6 +53,7 @@ export const useUsageTracker = (initialReports: UsageReport[]) => {
       usage: turnUsage,
       timestamp: Date.now(),
       callType: isFinal ? "live_turn" : "live_turn_ongoing",
+      tag,
     };
 
     setReports((prev) => {

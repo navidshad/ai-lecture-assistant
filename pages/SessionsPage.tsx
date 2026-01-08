@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { LectureSession } from "../types";
 import { sessionManager } from "../services/db";
-import { BookOpen, Trash2, PlusCircle } from "lucide-react";
+import { BookOpen, Trash2, PlusCircle, BarChart3 } from "lucide-react";
 import { logger } from "../services/logger";
 import { setLocalStorage } from "../utils/storage";
 import ResumeConfigModal from "../components/ResumeConfigModal";
@@ -12,11 +12,13 @@ const LOG_SOURCE = "SessionsPage";
 interface SessionsPageProps {
   onContinueSession: (session: LectureSession) => void;
   onNewSession: () => void;
+  onViewReport: (session: LectureSession) => void;
 }
 
 const SessionsPage: React.FC<SessionsPageProps> = ({
   onContinueSession,
   onNewSession,
+  onViewReport,
 }) => {
   const [sessions, setSessions] = useState<LectureSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,6 +179,14 @@ const SessionsPage: React.FC<SessionsPageProps> = ({
                   >
                     <BookOpen className="h-5 w-5" />
                     <span>Continue</span>
+                  </button>
+                  <button
+                    onClick={() => onViewReport(session)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 text-blue-400 font-semibold rounded-lg hover:bg-blue-600/30 transition-colors border border-blue-500/30"
+                    title="View Usage Report"
+                  >
+                    <BarChart3 className="h-5 w-5" />
+                    <span>Report</span>
                   </button>
                   <button
                     onClick={() => handleDelete(session.id)}
