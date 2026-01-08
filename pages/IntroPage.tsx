@@ -69,7 +69,7 @@ const IntroPage: React.FC<IntroPageProps> = ({
 
   const [forceTextOnly, setForceTextOnly] = useLocalStorage<boolean>(
     FORCE_TEXT_ONLY_STORAGE_KEY,
-    false
+    true
   );
 
   const [imageOptimization, setImageOptimization] = useLocalStorage<ImageOptimizationSettings>(
