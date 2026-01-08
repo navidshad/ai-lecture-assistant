@@ -6,6 +6,7 @@ import FileUploadButton from "./Chat/FileUploadButton";
 import MessageAttachments from "./Chat/MessageAttachments";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { useToast } from "../hooks/useToast";
+import { formatCost } from "../utils/costCalculator";
 
 interface TranscriptPanelProps {
   isVisible: boolean;
@@ -201,8 +202,7 @@ const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
                       )}
                     </button>
                   )}
-                  {entry.speaker === "ai" && entry.slideNumber != null && (
-                    <div className="mb-1">
+                    <div className="mb-1 flex items-center gap-2">
                       <span
                         className={`${
                           isDesktop
@@ -212,8 +212,14 @@ const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
                       >
                         Slide {entry.slideNumber}
                       </span>
+                      {entry.estimatedCost != null && entry.estimatedCost > 0 && (
+                        <span className={`${
+                          isDesktop ? "text-xs" : "text-[10px]"
+                        } text-gray-400 font-medium`}>
+                          Cost: {formatCost(entry.estimatedCost)}
+                        </span>
+                      )}
                     </div>
-                  )}
                   {entry.text && (
                     <div className={`${isDesktop ? "" : "text-xs"} break-words`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                       <MarkdownRenderer markdown={entry.text} />

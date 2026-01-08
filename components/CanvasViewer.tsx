@@ -67,7 +67,10 @@ const CanvasViewer: React.FC<CanvasViewerProps> = ({
       // Join all blocks' content with double newline separator
       const markdown = contentBlocks.map((block) => block.content).join("\n\n");
 
-      const fixedMarkdown = await fixMarkdownContent(markdown, apiKey);
+      const { content: fixedMarkdown } = await fixMarkdownContent(
+        markdown,
+        apiKey
+      );
 
       // Replace all blocks with single fixed block
       setContentBlocks([{ type: "markdown", content: fixedMarkdown }]);

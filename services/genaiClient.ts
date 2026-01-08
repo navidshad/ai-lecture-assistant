@@ -1,15 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
+import { MODEL_CONFIGS } from "../constants/modelCosts.static";
+import { TokenUsage } from "../types";
 
 export function getGenAI(apiKey: string | null) {
   return new GoogleGenAI({ apiKey: apiKey ?? (process.env.API_KEY as string) });
 }
 
-type GenerateContentResponseLike = { text: string };
+// Standard type for response handling
 
 export async function fixMarkdownContent(
   markdown: string,
   apiKey: string | null
-): Promise<string> {
+): Promise<{ content: string; usage: TokenUsage }> {
   const genAI = getGenAI(apiKey);
 
   const prompt = `You are a Markdown fixer. Fix the following Markdown content. Return ONLY the corrected Markdown (no explanations, no wrapping backticks).
@@ -26,16 +28,14 @@ Input Markdown:
 ${markdown}`;
 
   try {
-    const textPart = { text: prompt };
-    const response: GenerateContentResponseLike = await (
-      genAI.models.generateContent as any
-    )({
-      model: "gemini-2.0-flash-exp",
-      contents: { parts: [textPart] },
+    const result = await (genAI.models.generateContent as any)({
+      model: MODEL_CONFIGS.MARKDOWN_FIXER,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0 },
     });
 
-    const text = response.text;
+    const text = result.text;
+    const usage = result.usageMetadata;
 
     // Remove any wrapping backticks or markdown code fences if present
     const cleaned = text
@@ -43,7 +43,14 @@ ${markdown}`;
       .replace(/\n?```$/i, "")
       .trim();
 
-    return cleaned;
+    return {
+      content: cleaned,
+      usage: {
+        promptTokens: usage?.promptTokenCount ?? 0,
+        completionTokens: usage?.candidatesTokenCount ?? 0,
+        totalTokens: usage?.totalTokenCount ?? 0,
+      },
+    };
   } catch (error) {
     console.error("Error fixing markdown:", error);
     throw new Error(

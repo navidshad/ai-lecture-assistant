@@ -1,10 +1,10 @@
-export const MODELS = [
-  { id: 'gemini-2.5-flash-native-audio-preview-09-2025', name: 'Gemini 2.5 Flash Native Audio' },
-  // Reserved for future options:
-  // { id: 'gemini-live-2.5-flash-preview', name: 'Gemini 2.5 Flash Live' },
-  // { id: 'gemini-2.0-flash-live-001', name: 'Gemini 2.0 Flash Live' },
-];
+import { MODELS as MODEL_DEFS } from "./modelCosts.static";
 
-export type ModelId = (typeof MODELS)[number]['id'];
+export const MODELS = MODEL_DEFS.filter((m) => m.type === "live").map((m) => ({
+  id: m.id,
+  name: m.name,
+}));
+
+export type ModelId = (typeof MODELS)[number]["id"];
 
 

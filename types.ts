@@ -17,6 +17,19 @@ export interface LectureConfig {
   prompt?: string;
 }
 
+export interface TokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
+export interface UsageReport {
+  modelId: string;
+  usage: TokenUsage;
+  timestamp: number;
+  callType?: string; // e.g., 'plan_gen', 'live_session', 'markdown_fix'
+}
+
 export interface LectureSession {
   id: string;
   fileName: string;
@@ -27,6 +40,7 @@ export interface LectureSession {
   currentSlideIndex: number;
   lectureConfig: LectureConfig;
   slideGroups?: SlideGroup[];
+  usageReports: UsageReport[];
 }
 
 export enum LectureSessionState {
@@ -53,6 +67,7 @@ export interface TranscriptEntry {
   text: string;
   slideNumber?: number;
   attachments?: ChatAttachment[];
+  estimatedCost?: number;
 }
 
 export type CanvasBlockType = "markdown" | "diagram" | "ascii" | "table";

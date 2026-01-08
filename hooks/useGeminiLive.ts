@@ -13,6 +13,7 @@ import {
   LectureSessionState,
   TranscriptEntry,
   CanvasBlock,
+  UsageReport,
 } from "../types";
 import { logger } from "../services/logger";
 import {
@@ -21,6 +22,7 @@ import {
 } from "../services/geminiLiveUtils";
 import { buildSessionConfig } from "../services/geminiLiveConfig";
 import { useTranscriptManager } from "./useTranscriptManager";
+import { useUsageTracker } from "./useUsageTracker";
 import {
   buildSlideMemory,
   buildSlideAnchorText,
@@ -60,6 +62,7 @@ interface UseGeminiLiveProps {
   ) => void;
   apiKey: string | null;
   currentSlideIndex: number;
+  usageReports: UsageReport[];
 }
 
 export const useGeminiLive = ({
@@ -76,6 +79,7 @@ export const useGeminiLive = ({
   onRenderCanvas,
   apiKey,
   currentSlideIndex,
+  usageReports,
 }: UseGeminiLiveProps) => {
   // Use extracted session state manager
   const { sessionState, setSessionState, error, setError } = useSessionState();
@@ -101,6 +105,12 @@ export const useGeminiLive = ({
   const slideChangeSeqRef = useRef(0);
   // Counter for periodic re-anchoring during long conversations
   const turnCounterRef = useRef(0);
+  const {
+    reports,
+    estimatedCost,
+    trackLiveTurnUsage,
+  } = useUsageTracker(usageReports);
+
   // Session resumption tracking
   const userEndedSessionRef = useRef(false);
   const reconnectionAttemptsRef = useRef(0);
@@ -128,6 +138,7 @@ export const useGeminiLive = ({
         // ignore
       });
   }, []);
+
 
   useEffect(() => {
     isMutedRef.current = isMuted;
@@ -176,7 +187,7 @@ export const useGeminiLive = ({
   }, [runWithOpenSession]);
 
   // Use extracted transcript manager
-  const { addTranscriptEntry } = useTranscriptManager({
+  const { addTranscriptEntry, setEntryCost } = useTranscriptManager({
     setTranscript,
     currentSlideIndexRef,
     aiMessageOpenRef,
@@ -467,6 +478,8 @@ export const useGeminiLive = ({
             }
           },
           onmessage: async (message: LiveServerMessage) => {
+            console.log("Received event", message);
+            
             // Ignore messages from older connections
             if (thisConnectSeq !== connectSeqRef.current) {
               return;
@@ -485,6 +498,46 @@ export const useGeminiLive = ({
                 reconnectionAttemptsRef.current = 0;
                 isReconnectingRef.current = false;
               }
+            }
+
+            // Handle usage metadata
+            
+            if ((message as any).usageMetadata) {
+              const usageData = (message as any).usageMetadata;
+              const promptTokens =
+                usageData.promptTokenCount ??
+                usageData.prompt_token_count ??
+                0;
+              const completionTokens =
+                (usageData.responseTokenCount ??
+                  usageData.response_token_count ??
+                  usageData.candidatesTokenCount ??
+                  usageData.candidates_token_count ??
+                  0) + (usageData.thoughtsTokenCount ?? 0);
+              const totalTokens =
+                usageData.totalTokenCount ?? usageData.total_token_count ?? 0;
+
+              const isFinal = (message as any).serverContent?.turnComplete === true;
+
+              // Calculate incremental cost for the current AI turn
+              import("../utils/costCalculator").then(
+                ({ calculateEstimatedCost }) => {
+                  const isFinal = (message as any).serverContent?.turnComplete === true;
+                  const turnUsage = trackLiveTurnUsage({
+                    modelId: selectedModel,
+                    usageMetadata: usageData,
+                    isFinal,
+                  });
+
+                  const turnCost = calculateEstimatedCost(
+                    selectedModel,
+                    turnUsage
+                  );
+                  if (turnCost > 0) {
+                    setEntryCost(turnCost, "ai");
+                  }
+                }
+              );
             }
 
             // Handle GoAway messages (connection will terminate soon)
@@ -969,5 +1022,7 @@ export const useGeminiLive = ({
     goToSlide,
     sendMessage,
     requestExplanation,
+    estimatedCost,
+    reports,
   };
 };

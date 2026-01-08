@@ -4,6 +4,9 @@ import { parsePdf } from "../services/pdfUtils";
 import { getGenAI } from "../services/genaiClient";
 import { parseLecturePlanResponse } from "../services/lecturePlanParser";
 import { generateSessionId } from "../utils/id";
+import { MODEL_CONFIGS } from "../constants/modelCosts.static";
+import { calculateEstimatedCost } from "../utils/costCalculator";
+import { TokenUsage, UsageReport } from "../types";
 
 interface UseLecturePlanOptions {
   apiKey: string | null;
@@ -103,16 +106,27 @@ Slide 2:
         const textPart = { text: prompt };
 
         // Using a minimal response typing for compatibility with current SDK shape
-        type GenerateContentResponseLike = { text: string };
-        const response: GenerateContentResponseLike = await (
-          ai.models.generateContent as any
-        )({
-          model: "gemini-2.5-pro",
-          contents: { parts: [textPart, pdfPart] },
+        // Using a response typing that includes usageMetadata
+        const result = await (ai.models.generateContent as any)({
+          model: MODEL_CONFIGS.PLAN_GENERATION,
+          contents: [{ role: "user", parts: [textPart, pdfPart] }],
           generationConfig: { temperature: 0 },
         });
 
-        const lecturePlanText: string = response.text;
+        const lecturePlanText = result.text;
+        const usage = result.usageMetadata;
+
+        const initialUsageReport: UsageReport = {
+          modelId: MODEL_CONFIGS.PLAN_GENERATION,
+          usage: {
+            promptTokens: usage?.promptTokenCount ?? 0,
+            completionTokens: usage?.candidatesTokenCount ?? 0,
+            totalTokens: usage?.totalTokenCount ?? 0,
+          },
+          timestamp: Date.now(),
+          callType: "plan_gen",
+        };
+
         const { generalInfo, slideSummaries, importantSlides } =
           parseLecturePlanResponse(lecturePlanText);
 
@@ -141,6 +155,7 @@ Slide 2:
           transcript: [],
           currentSlideIndex: 0,
           lectureConfig,
+          usageReports: [initialUsageReport],
         };
 
         return newSession;

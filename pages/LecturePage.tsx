@@ -81,14 +81,6 @@ const LecturePage: React.FC<LecturePageProps> = ({
     clearAttachments,
   } = useAttachments();
 
-  const { saveSessionState } = useSessionPersistence({
-    session,
-    slides,
-    transcript,
-    currentSlideIndex,
-    slideGroups: slideGroups ?? undefined,
-  });
-
   const setCurrentSlideIndex = (updater: React.SetStateAction<number>) => {
     _setCurrentSlideIndex((prevIndex) => {
       const newIndex =
@@ -227,8 +219,6 @@ const LecturePage: React.FC<LecturePageProps> = ({
     [slides.length]
   );
 
-  // handleRenderCanvas is defined after useGeminiLive, see below.
-
   const {
     sessionState,
     startLecture,
@@ -237,9 +227,10 @@ const LecturePage: React.FC<LecturePageProps> = ({
     previous,
     end,
     error,
-    goToSlide,
     sendMessage,
     requestExplanation,
+    estimatedCost,
+    reports,
   } = useGeminiLive({
     slides: slides,
     generalInfo: session.generalInfo,
@@ -254,6 +245,16 @@ const LecturePage: React.FC<LecturePageProps> = ({
     onRenderCanvas: handleRenderCanvasProxy,
     apiKey,
     currentSlideIndex,
+    usageReports: session.usageReports,
+  });
+
+  const { saveSessionState } = useSessionPersistence({
+    session,
+    slides,
+    transcript,
+    currentSlideIndex,
+    slideGroups: slideGroups ?? undefined,
+    usageReports: reports,
   });
 
   const handleRenderCanvas = useCallback(
@@ -278,24 +279,20 @@ const LecturePage: React.FC<LecturePageProps> = ({
         return newSlides;
       });
       setActiveTab("canvas");
-      // Markdown-only: no additional validation or fixing here.
     },
     [currentSlideIndex]
   );
-  // If the connection dropped and the user unmutes, auto-reconnect
+
   useEffect(() => {
     if (!isMuted && sessionState === LectureSessionState.DISCONNECTED) {
       logger.log(
         LOG_SOURCE,
         "Microphone unmuted while disconnected. Auto-reconnecting."
       );
-      // This is a disconnected reconnection - silent resume
       startLecture("disconnected");
     }
   }, [isMuted, sessionState, startLecture]);
-  // Removed: auto-fix error flow. Canvas is markdown-only now.
 
-  // Keep proxy pointing to latest handler
   useEffect(() => {
     onRenderCanvasRef.current = handleRenderCanvas;
   }, [handleRenderCanvas]);
@@ -311,7 +308,6 @@ const LecturePage: React.FC<LecturePageProps> = ({
     }
   }, [error, showToast]);
 
-  // Reset to slide view whenever the slide changes
   useEffect(() => {
     logger.debug(
       LOG_SOURCE,
@@ -323,23 +319,19 @@ const LecturePage: React.FC<LecturePageProps> = ({
   const handleStartLecture = () => {
     logger.log(LOG_SOURCE, "handleStartLecture called for a new session.");
     setHasLectureStarted(true);
-    // This is a new lecture
     startLecture("new");
   };
 
-  // Auto-mute 1.5s after AI starts speaking unless the turn switches back to the user
   useEffect(() => {
     const prevLen = lastTranscriptLengthRef.current;
     const currLen = transcript.length;
     if (currLen > prevLen) {
       const last = transcript[currLen - 1];
-      // New AI output started: schedule auto-mute
       if (last?.speaker === "ai") {
         if (autoMuteTimerRef.current) {
           window.clearTimeout(autoMuteTimerRef.current);
         }
         autoMuteTimerRef.current = window.setTimeout(() => {
-          // If user has not started speaking during the delay, enforce mute
           const latest = transcript[transcript.length - 1];
           const userIsSpeaking = latest?.speaker === "user";
           if (!userIsSpeaking) {
@@ -350,12 +342,8 @@ const LecturePage: React.FC<LecturePageProps> = ({
       }
     }
     lastTranscriptLengthRef.current = currLen;
-    return () => {
-      // no-op cleanup; timer is cleared elsewhere when needed
-    };
   }, [transcript]);
 
-  // If user starts speaking while a mute timer is pending, cancel it
   useEffect(() => {
     if (!autoMuteTimerRef.current) return;
     const last = transcript[transcript.length - 1];
@@ -365,7 +353,6 @@ const LecturePage: React.FC<LecturePageProps> = ({
     }
   }, [transcript]);
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (autoMuteTimerRef.current) {
@@ -381,16 +368,13 @@ const LecturePage: React.FC<LecturePageProps> = ({
         LOG_SOURCE,
         "Continuing session, calling startLecture automatically."
       );
-      // This is a saved session continuation from SessionsPage
       startLecture("saved");
     }
-    // This effect should only run once on mount for this purpose.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleReconnect = useCallback(() => {
     logger.log(LOG_SOURCE, "handleReconnect called.");
-    // This is a disconnected reconnection - silent resume
     startLecture("disconnected");
   }, [startLecture]);
 
@@ -399,7 +383,6 @@ const LecturePage: React.FC<LecturePageProps> = ({
   }, []);
 
   const handleToolActivate = useCallback(() => {
-    // Open chat panel if it's closed when any tool is activated
     if (!isTranscriptVisible) {
       setIsTranscriptVisible(true);
     }
@@ -445,7 +428,6 @@ const LecturePage: React.FC<LecturePageProps> = ({
       slideChangeTimerRef.current = window.setTimeout(() => {
         const slide = slides[index];
         if (!slide) return;
-        // Clear any hover preview when a slide is clicked
         setHoverPreviewIndex(null);
         if (index !== currentSlideIndex) {
           setCurrentSlideIndex(index);
@@ -463,7 +445,6 @@ const LecturePage: React.FC<LecturePageProps> = ({
       logger.debug(LOG_SOURCE, "handleSendMessage called for typed text.");
       if (!sendMessage) return;
 
-      // Skip empty messages (no text and no attachments)
       const trimmedMessage = message.trim();
       if (
         !trimmedMessage &&
@@ -472,9 +453,6 @@ const LecturePage: React.FC<LecturePageProps> = ({
         return;
       }
 
-      // Optimistically add the user's typed message to the transcript.
-      // The `inputTranscription` event is for voice input, not for messages sent via this text input.
-      // Tag user messages with the current slide number
       setTranscript((prev) => [
         ...prev,
         {
@@ -531,18 +509,10 @@ const LecturePage: React.FC<LecturePageProps> = ({
     logger.log(LOG_SOURCE, "Transcript downloaded.");
   }, [transcript, session.generalInfo, session.fileName]);
 
-  const tabButtonClasses = (tabName: "slide" | "canvas") =>
-    `px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none ${
-      activeTab === tabName
-        ? "text-blue-400 border-b-2 border-blue-400"
-        : "text-gray-400 border-b-2 border-transparent hover:bg-gray-700/50 hover:text-gray-200"
-    }`;
-
   const currentCanvasContent = slides[currentSlideIndex]?.canvasContent || [];
 
   return (
     <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
-      {/* Desktop Left Transcript Panel */}
       <div className="hidden md:flex">
         <TranscriptPanel
           isVisible={isTranscriptVisible}
@@ -559,18 +529,17 @@ const LecturePage: React.FC<LecturePageProps> = ({
         />
       </div>
 
-      {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar
           fileName={session.fileName}
           currentSlide={currentSlideIndex + 1}
           totalSlides={slides.length}
+          estimatedCost={estimatedCost}
         />
 
         <div className="flex-1 flex flex-col relative overflow-hidden">
           <main className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden">
             <div className="flex-1 min-h-0 flex flex-col">
-              {/* Tab buttons and Toolbox */}
               <div className="relative flex items-center justify-between border-b border-gray-700 z-10">
                 <TabNav activeTab={activeTab} onChange={setActiveTab} />
                 <Toolbox
@@ -580,7 +549,6 @@ const LecturePage: React.FC<LecturePageProps> = ({
                 />
               </div>
 
-              {/* Tab content */}
               <div className="flex-1 min-h-0 pt-4">
                 <div
                   className={`${
@@ -623,7 +591,6 @@ const LecturePage: React.FC<LecturePageProps> = ({
               </div>
             </div>
 
-            {/* Mobile Transcript Panel */}
             <div className="md:hidden">
               <TranscriptPanel
                 isVisible={isTranscriptVisible}
@@ -640,7 +607,6 @@ const LecturePage: React.FC<LecturePageProps> = ({
               />
             </div>
 
-            {/* Mobile Slides Overview Panel */}
             <div
               className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
                 isSlidesVisible ? "h-36 mt-4" : "h-0"
@@ -713,7 +679,6 @@ const LecturePage: React.FC<LecturePageProps> = ({
         </footer>
       </div>
 
-      {/* Desktop Right Slides Panel */}
       <aside
         className={`hidden md:flex flex-col bg-gray-800/50 border-l border-gray-700 transition-all duration-300 ease-in-out ${
           isSlidesVisible ? "w-48 md:w-64 p-2" : "w-0"
