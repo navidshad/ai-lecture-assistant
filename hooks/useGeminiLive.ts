@@ -65,6 +65,7 @@ interface UseGeminiLiveProps {
   currentSlideIndex: number;
   usageReports: UsageReport[];
   imageOptimization?: ImageOptimizationSettings;
+  forceTextOnly?: boolean;
 }
 
 export const useGeminiLive = ({
@@ -83,6 +84,7 @@ export const useGeminiLive = ({
   currentSlideIndex,
   usageReports,
   imageOptimization,
+  forceTextOnly,
 }: UseGeminiLiveProps) => {
   // Use extracted session state manager
   const { sessionState, setSessionState, error, setError } = useSessionState();
@@ -203,8 +205,9 @@ export const useGeminiLive = ({
       sessionOpenRef,
       runWithOpenSession,
       imageSettings: imageOptimization,
+      forceTextOnly,
     }),
-    [runWithOpenSession, imageOptimization]
+    [runWithOpenSession, imageOptimization, forceTextOnly]
   );
 
   // (removed) sendSlideImageContext – unified into sendMessage
@@ -407,7 +410,7 @@ export const useGeminiLive = ({
                 const firstSlide = slides[0];
                 const parts: any[] = [];
                 
-                if (firstSlide.hasImages) {
+                if (firstSlide.hasImages && !forceTextOnly) {
                   const base64Data = firstSlide.imageDataUrl.split(",")[1];
                   if (base64Data) {
                     parts.push({

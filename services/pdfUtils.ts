@@ -20,6 +20,9 @@ export const parsePdf = async (file: File): Promise<ParsedSlide[]> => {
 
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
+          let imageDataUrl = "";
+          let hasImages = false;
+
           // Adaptive scaling to improve small-text readability while bounding image size
           const baseViewport = page.getViewport({ scale: 1.0 });
           const IMAGE_MAX_SIDE_PX = 2200; // longest side target in px (cap bandwidth)
@@ -30,27 +33,42 @@ export const parsePdf = async (file: File): Promise<ParsedSlide[]> => {
           // Create canvas to render page
           const canvas = document.createElement('canvas');
           const context = canvas.getContext('2d');
-          if (!context) {
-              throw new Error("Could not get canvas context");
+          if (context) {
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            try {
+              await page.render({ canvasContext: context, viewport }).promise;
+              imageDataUrl = canvas.toDataURL('image/png');
+            } catch (renderErr) {
+              console.warn("Failed to render page", i, renderErr);
+            }
           }
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
 
-          await page.render({ canvasContext: context, viewport }).promise;
-          const imageDataUrl = canvas.toDataURL('image/png');
+          // Detect if page has images
+          try {
+            const operatorList = await page.getOperatorList();
+            if (pdfjsLib.OPS) {
+              const imageOps = [
+                pdfjsLib.OPS.paintImageXObject,
+                pdfjsLib.OPS.paintInlineImageXObject,
+                pdfjsLib.OPS.paintImageMaskXObject
+              ].filter(id => id !== undefined);
 
-          // Extract text content
+              hasImages = operatorList.fnArray.some((fn: number) => imageOps.includes(fn));
+            } else {
+              hasImages = true; // Fallback
+            }
+          } catch (opErr) {
+            console.warn("Failed to get operator list for page", i, opErr);
+            hasImages = true; // Fallback
+          }
+
+          // Extract text content - always do this
           const textContentItems = await page.getTextContent();
           const textContent = textContentItems.items.map((item: any) => item.str).join(' ');
 
-          // Detect if page has images
-          const operatorList = await page.getOperatorList();
-          const imageOps = [
-            pdfjsLib.OPS.paintImageXObject,
-            pdfjsLib.OPS.paintInlineImageXObject,
-            pdfjsLib.OPS.paintImageMaskXObject
-          ];
-          const hasImages = operatorList.fnArray.some((fn: number) => imageOps.includes(fn));
+          console.log(`Parsed page ${i}: hasImages=${hasImages}, textLength=${textContent.length}`);
 
           slides.push({
             pageNumber: i,

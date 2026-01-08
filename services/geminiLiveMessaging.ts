@@ -15,6 +15,7 @@ interface MessagingDependencies {
   sessionOpenRef: { current: boolean };
   runWithOpenSession: (runner: (session: any) => void) => void;
   imageSettings?: ImageOptimizationSettings;
+  forceTextOnly?: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ export const createSendMessage = ({
   sessionOpenRef,
   runWithOpenSession,
   imageSettings,
+  forceTextOnly,
 }: MessagingDependencies) => {
   const sendMessage = async (options: SendMessageOptions) => {
     logger.debug(LOG_SOURCE, "sendMessage called.");
@@ -39,8 +41,8 @@ export const createSendMessage = ({
     const parts: any[] = [];
     
     if (slide) {
-      // Only send image if the slide actually has images to save tokens
-      if (slide.hasImages) {
+      // Only send image if the slide actually has images AND we are not in forceTextOnly mode
+      if (slide.hasImages && !forceTextOnly) {
         let imageData = slide.imageDataUrl;
         if (imageSettings) {
           try {
@@ -57,7 +59,8 @@ export const createSendMessage = ({
           });
         }
       } else {
-        logger.debug(LOG_SOURCE, `Slide ${slide.pageNumber} is text-only. Skipping image payload.`);
+        const reason = forceTextOnly ? "forceTextOnly mode active" : "slide is text-only";
+        logger.debug(LOG_SOURCE, `Skipping image payload for Slide ${slide.pageNumber} (${reason}).`);
       }
 
       if (slide.canvasContent && slide.canvasContent.length > 0) {

@@ -22,6 +22,7 @@ export interface LectureConfig {
   model: string;
   prompt?: string;
   imageOptimization?: ImageOptimizationSettings;
+  forceTextOnly?: boolean;
 }
 
 export interface TokenUsage {

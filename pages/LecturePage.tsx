@@ -80,6 +80,10 @@ const LecturePage: React.FC<LecturePageProps> = ({
   );
   const [isRectangleToolActive, setIsRectangleToolActive] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [forceTextOnly] = useLocalStorage<boolean>(
+    "ai-lecture-assistant-force-text-only",
+    session.lectureConfig.forceTextOnly ?? false
+  );
   const [imageOptimization, setImageOptimization] = useLocalStorage<ImageOptimizationSettings>(
     OPTIMIZATION_STORAGE_KEY,
     session.lectureConfig.imageOptimization ?? {
@@ -265,6 +269,7 @@ const LecturePage: React.FC<LecturePageProps> = ({
     currentSlideIndex,
     usageReports: session.usageReports,
     imageOptimization,
+    forceTextOnly,
   });
 
   const { saveSessionState } = useSessionPersistence({

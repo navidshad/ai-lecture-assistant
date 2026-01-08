@@ -58,7 +58,7 @@ export const buildSessionConfig = ({
         - **Navigation:** You CANNOT change slides. To move, ask the user to use UI controls (buttons or thumbnails).
         - **Workflow:** Explain the active slide using the provided image, summary, and canvas. When finished, ask the user to proceed.
         - **Active Slide:** When you see \`ACTIVE SLIDE: N\`, immediately switch focus to slide N. Wait for the image/summary before explaining.
-        - **Canvas:** Use 'provideCanvasMarkdown' proactively for math ($ $), diagrams (\`\`\`mermaid), or complex data. After calling it, tell the user to check the canvas.
+        - **Canvas:** Use 'provideCanvasMarkdown' ONLY for complex math ($ $), diagrams (\`\`\`mermaid), or if the user explicitly asks for a visual explanation. DO NOT use it for simple text summaries.
         - **Interaction:** Answer questions concisely using slide context. If a question is about another slide, teaser it and ask the user to navigate there.`,
     },
   };
