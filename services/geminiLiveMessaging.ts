@@ -1,5 +1,6 @@
-import { Slide, ChatAttachment } from "../types";
+import { Slide, ChatAttachment, ImageOptimizationSettings } from "../types";
 import { logger } from "./logger";
+import { processImage } from "../utils/imageProcessor";
 
 const LOG_SOURCE = "geminiLiveMessaging";
 
@@ -13,6 +14,7 @@ export type SendMessageOptions = {
 interface MessagingDependencies {
   sessionOpenRef: { current: boolean };
   runWithOpenSession: (runner: (session: any) => void) => void;
+  imageSettings?: ImageOptimizationSettings;
 }
 
 /**
@@ -21,8 +23,9 @@ interface MessagingDependencies {
 export const createSendMessage = ({
   sessionOpenRef,
   runWithOpenSession,
+  imageSettings,
 }: MessagingDependencies) => {
-  const sendMessage = (options: SendMessageOptions) => {
+  const sendMessage = async (options: SendMessageOptions) => {
     logger.debug(LOG_SOURCE, "sendMessage called.");
     if (!sessionOpenRef.current) {
       logger.warn(
@@ -34,8 +37,18 @@ export const createSendMessage = ({
     const { slide, text, attachments } = options;
     const turnComplete = options.turnComplete ?? true;
     const parts: any[] = [];
+    
     if (slide) {
-      const base64Data = slide.imageDataUrl.split(",")[1];
+      let imageData = slide.imageDataUrl;
+      if (imageSettings) {
+        try {
+          imageData = await processImage(imageData, imageSettings);
+        } catch (e) {
+          logger.warn(LOG_SOURCE, "Failed to process slide image, sending original.", e as any);
+        }
+      }
+      
+      const base64Data = imageData.split(",")[1];
       if (base64Data) {
         parts.push({
           inlineData: { mimeType: "image/png", data: base64Data },
@@ -43,9 +56,7 @@ export const createSendMessage = ({
       }
       if (slide.canvasContent && slide.canvasContent.length > 0) {
         parts.push({
-          text: `Context: The canvas for this slide currently contains the following content blocks, which you or the user created earlier. Use this information in your explanation. Canvas Content: ${JSON.stringify(
-            slide.canvasContent
-          )}`,
+          text: `Context: Canvas Content: ${JSON.stringify(slide.canvasContent)}`,
         });
       }
     }
@@ -54,8 +65,15 @@ export const createSendMessage = ({
     if (attachments && attachments.length > 0) {
       for (const attachment of attachments) {
         if (attachment.type === "image" || attachment.type === "selection") {
-          // Image attachments (including selections)
-          const base64Data = attachment.data.split(",")[1];
+          let imageData = attachment.data;
+          if (imageSettings) {
+            try {
+              imageData = await processImage(imageData, imageSettings);
+            } catch (e) {
+              logger.warn(LOG_SOURCE, "Failed to process attachment, sending original.", e as any);
+            }
+          }
+          const base64Data = imageData.split(",")[1];
           if (base64Data) {
             parts.push({
               inlineData: {
@@ -65,7 +83,6 @@ export const createSendMessage = ({
             });
           }
         }
-        // Only images are supported, ignore other types
       }
     }
 

@@ -7,10 +7,13 @@ import {
   LectureSession,
   SlideGroup,
   ChatAttachment,
+  ImageOptimizationSettings,
 } from "../types";
 import { useGeminiLive } from "../hooks/useGeminiLive";
 import { useToast } from "../hooks/useToast";
 import { sessionManager } from "../services/db";
+import ConfigModal from "../components/ConfigModal";
+import { VOICES } from "../constants/voices";
 import SlideViewer from "../components/SlideViewer";
 import CanvasViewer from "../components/CanvasViewer";
 import Controls from "../components/Controls";
@@ -27,6 +30,8 @@ import { groupSlidesByAI } from "../services/slideGrouper";
 import { MODEL_CONFIGS } from "../constants/modelCosts.static";
 import { useLocalStorage } from "../utils/storage";
 import { useAttachments } from "../hooks/useAttachments";
+
+const OPTIMIZATION_STORAGE_KEY = "ai-lecture-assistant-optimization-settings";
 
 const LOG_SOURCE = "LecturePage";
 
@@ -74,6 +79,14 @@ const LecturePage: React.FC<LecturePageProps> = ({
     null
   );
   const [isRectangleToolActive, setIsRectangleToolActive] = useState(false);
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [imageOptimization, setImageOptimization] = useLocalStorage<ImageOptimizationSettings>(
+    OPTIMIZATION_STORAGE_KEY,
+    session.lectureConfig.imageOptimization ?? {
+      maxDimension: 256,
+      grayscale: true,
+    }
+  );
 
   const { showToast } = useToast();
   const {
@@ -251,6 +264,7 @@ const LecturePage: React.FC<LecturePageProps> = ({
     apiKey,
     currentSlideIndex,
     usageReports: session.usageReports,
+    imageOptimization,
   });
 
   const { saveSessionState } = useSessionPersistence({
@@ -541,6 +555,7 @@ const LecturePage: React.FC<LecturePageProps> = ({
           totalSlides={slides.length}
           estimatedCost={estimatedCost}
           onViewReport={onViewReport}
+          onOpenSettings={() => setIsConfigOpen(true)}
         />
 
         <div className="flex-1 flex flex-col relative overflow-hidden">
@@ -721,6 +736,19 @@ const LecturePage: React.FC<LecturePageProps> = ({
           </>
         )}
       </aside>
+
+      <ConfigModal
+        isOpen={isConfigOpen}
+        onClose={() => setIsConfigOpen(false)}
+        selectedVoice={session.lectureConfig.voice}
+        onVoiceChange={() => {}} // Voice change not yet supported mid-session
+        voices={VOICES}
+        currentApiKey={apiKey}
+        onApiKeySave={() => {}} // API key change not yet supported mid-session
+        onApiKeyRemove={() => {}}
+        imageOptimization={imageOptimization}
+        onImageOptimizationChange={setImageOptimization}
+      />
     </div>
   );
 };

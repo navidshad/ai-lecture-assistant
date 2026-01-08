@@ -78,6 +78,6 @@ export const provideCanvasMarkdownFunctionDeclaration: FunctionDeclaration = {
 };
 
 // Tunables
-export const REANCHOR_EVERY_N_TURNS = 6; // set 0 to disable
+export const REANCHOR_EVERY_N_TURNS = 12; // set 0 to disable
 export const ENABLE_SERVER_INTERRUPT = true;
 

@@ -7,8 +7,8 @@ export const buildSlideMemory = (
   entries: TranscriptEntry[],
   slideNumber: number,
   currentSlideIndex: number,
-  maxMessages: number = 8,
-  maxChars: number = 1800
+  maxMessages: number = 5,
+  maxChars: number = 1000
 ): string => {
   // Filter entries to only those belonging to the active slide
   const filtered = entries.filter(
@@ -37,8 +37,8 @@ export const buildSlideAnchorText = (
     transcriptNow,
     slide.pageNumber,
     currentSlideIndex,
-    8,
-    1800
+    5,
+    1000
   );
   return [
     `ACTIVE SLIDE: ${slide.pageNumber}`,

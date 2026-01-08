@@ -10,11 +10,17 @@ export interface Slide extends ParsedSlide {
   isImportant?: boolean;
 }
 
+export interface ImageOptimizationSettings {
+  maxDimension: number; // e.g., 768, 512, 256
+  grayscale: boolean;
+}
+
 export interface LectureConfig {
   language: string;
   voice: string;
   model: string;
   prompt?: string;
+  imageOptimization?: ImageOptimizationSettings;
 }
 
 export interface TokenUsage {

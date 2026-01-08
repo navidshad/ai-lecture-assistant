@@ -10,6 +10,7 @@ import { sessionManager } from "../services/db";
 import { useLecturePlan } from "../hooks/useLecturePlan";
 import FileUploadBox from "../components/Intro/FileUploadBox";
 import { useLocalStorage } from "../utils/storage";
+import { ImageOptimizationSettings } from "../types";
 
 const LOG_SOURCE = "IntroPage";
 
@@ -26,6 +27,7 @@ const VOICE_STORAGE_KEY = "ai-lecture-assistant-voice";
 const PROMPT_STORAGE_KEY = "ai-lecture-assistant-custom-prompt";
 const GROUP_SLIDES_STORAGE_KEY = "ai-lecture-assistant-group-slides";
 const MARK_IMPORTANT_STORAGE_KEY = "ai-lecture-assistant-mark-important";
+const OPTIMIZATION_STORAGE_KEY = "ai-lecture-assistant-optimization-settings";
 
 const IntroPage: React.FC<IntroPageProps> = ({
   onLectureStart,
@@ -63,6 +65,11 @@ const IntroPage: React.FC<IntroPageProps> = ({
     false
   );
 
+  const [imageOptimization, setImageOptimization] = useLocalStorage<ImageOptimizationSettings>(
+    OPTIMIZATION_STORAGE_KEY,
+    { maxDimension: 256, grayscale: true }
+  );
+
   // Ensure language remains valid if list updates
   useEffect(() => {
     if (!SUPPORTED_LANGUAGES.some((l) => l.title === selectedLanguage)) {
@@ -90,6 +97,9 @@ const IntroPage: React.FC<IntroPageProps> = ({
         try {
           logger.debug(LOG_SOURCE, "Starting session creation workflow...");
           const newSession = await createSessionFromPdf(file);
+          // Inject optimization settings into the session config
+          newSession.lectureConfig.imageOptimization = imageOptimization;
+          
           logger.log(LOG_SOURCE, "Creating new session in DB.", {
             id: newSession.id,
           });
@@ -246,6 +256,8 @@ const IntroPage: React.FC<IntroPageProps> = ({
         currentApiKey={apiKey}
         onApiKeySave={onApiKeySave}
         onApiKeyRemove={onApiKeyRemove}
+        imageOptimization={imageOptimization}
+        onImageOptimizationChange={setImageOptimization}
       />
     </div>
   );

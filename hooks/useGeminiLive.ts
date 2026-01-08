@@ -14,6 +14,7 @@ import {
   TranscriptEntry,
   CanvasBlock,
   UsageReport,
+  ImageOptimizationSettings,
 } from "../types";
 import { logger } from "../services/logger";
 import {
@@ -63,6 +64,7 @@ interface UseGeminiLiveProps {
   apiKey: string | null;
   currentSlideIndex: number;
   usageReports: UsageReport[];
+  imageOptimization?: ImageOptimizationSettings;
 }
 
 export const useGeminiLive = ({
@@ -80,6 +82,7 @@ export const useGeminiLive = ({
   apiKey,
   currentSlideIndex,
   usageReports,
+  imageOptimization,
 }: UseGeminiLiveProps) => {
   // Use extracted session state manager
   const { sessionState, setSessionState, error, setError } = useSessionState();
@@ -199,8 +202,9 @@ export const useGeminiLive = ({
     createSendMessage({
       sessionOpenRef,
       runWithOpenSession,
+      imageSettings: imageOptimization,
     }),
-    [runWithOpenSession]
+    [runWithOpenSession, imageOptimization]
   );
 
   // (removed) sendSlideImageContext – unified into sendMessage
@@ -212,8 +216,8 @@ export const useGeminiLive = ({
         transcriptNow,
         slideNo,
         currentSlideIndexRef.current,
-        8,
-        1800
+        5,
+        1000
       );
       const anchor = [
         `ACTIVE SLIDE: ${slideNo}`,
@@ -359,8 +363,8 @@ export const useGeminiLive = ({
                     transcript,
                     currentSlideNumber,
                     currentSlideIndexRef.current,
-                    8,
-                    1800
+                    5,
+                    1000
                   );
                   const contextParts: string[] = [
                     `ACTIVE SLIDE: ${currentSlideNumber}`,
