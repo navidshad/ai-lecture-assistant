@@ -403,69 +403,62 @@ export const useGeminiLive = ({
                   });
                 }
               } else {
-                // For a new lecture, send the initial image + plan + instruction as a single turn
+                // For a new lecture, send the initial image (if any) + plan + instruction as a single turn
                 const firstSlide = slides[0];
-                const base64Data = firstSlide.imageDataUrl.split(",")[1];
-                if (base64Data) {
-                  const parts: any[] = [
-                    {
+                const parts: any[] = [];
+                
+                if (firstSlide.hasImages) {
+                  const base64Data = firstSlide.imageDataUrl.split(",")[1];
+                  if (base64Data) {
+                    parts.push({
                       inlineData: {
                         mimeType: "image/png",
                         data: base64Data,
                       },
-                    },
-                    {
-                      text: `CONTEXT: The lecture plan is as follows:\n${lecturePlanForAI}\n\nEND OF CONTEXT.`,
-                    },
-                    {
-                      text: `INSTRUCTION: You are on slide 1. Please begin the lecture now. Greet the user and then explain the content of this first slide.`,
-                    },
-                  ];
-                  runWithOpenSession((session) => {
-                    try {
-                      session.sendClientContent?.({
-                        turns: [{ role: "user", parts }],
-                        turnComplete: true,
-                      });
-                      logger.debug(
-                        LOG_SOURCE,
-                        "Sent initial context and instruction as a single turn for a new lecture."
-                      );
-                    } catch (e) {
-                      logger.warn(
-                        LOG_SOURCE,
-                        "sendClientContent failed for initial lecture; falling back to separate realtime inputs.",
-                        e as any
-                      );
-                      try {
-                        session.sendRealtimeInput({
-                          media: { data: base64Data, mimeType: "image/png" },
-                        });
-                        session.sendRealtimeInput({
-                          text: `CONTEXT: The lecture plan is as follows:\n${lecturePlanForAI}\n\nEND OF CONTEXT.`,
-                        });
-                        session.sendRealtimeInput({
-                          text: `INSTRUCTION: You are on slide 1. Please begin the lecture now. Greet the user and then explain the content of this first slide.`,
-                        });
-                        session.sendRealtimeInput?.({ event: "end_of_turn" });
-                      } catch {}
-                    }
-                  });
-                } else {
-                  // Fallback if image is missing (should not happen)
-                  sendMessage({
-                    text: [
-                      `CONTEXT: The lecture plan is as follows:\n${lecturePlanForAI}\n\nEND OF CONTEXT.`,
-                      `INSTRUCTION: You are on slide 1. Please begin the lecture now. Greet the user and then explain the content of this first slide.`,
-                    ],
-                    turnComplete: true,
-                  });
-                  runWithOpenSession((session) => {
-                    try {
-                      session.sendRealtimeInput?.({ event: "end_of_turn" });
-                    } catch {}
-                  });
+                    });
+                  }
                 }
+
+                parts.push({
+                  text: `CONTEXT: The lecture plan is as follows:\n${lecturePlanForAI}\n\nEND OF CONTEXT.`,
+                });
+
+                parts.push({
+                  text: `INSTRUCTION: You are on slide 1. Please begin the lecture now. Greet the user and then explain the content of this first slide.`,
+                });
+
+                runWithOpenSession((session) => {
+                  try {
+                    session.sendClientContent?.({
+                      turns: [{ role: "user", parts }],
+                      turnComplete: true,
+                    });
+                    logger.debug(
+                      LOG_SOURCE,
+                      "Sent initial context and instruction for a new lecture."
+                    );
+                  } catch (e) {
+                    logger.warn(
+                      LOG_SOURCE,
+                      "sendClientContent failed for initial lecture; falling back to separate realtime inputs.",
+                      e as any
+                    );
+                    try {
+                      for (const p of parts) {
+                        if (p.inlineData) {
+                          session.sendRealtimeInput({
+                            media: { data: p.inlineData.data, mimeType: "image/png" },
+                          });
+                        } else {
+                          session.sendRealtimeInput({ text: p.text });
+                        }
+                      }
+                      session.sendRealtimeInput?.({ event: "end_of_turn" });
+                    } catch (err) {
+                      logger.error(LOG_SOURCE, "Realtime fallback failed", err as any);
+                    }
+                  }
+                });
               }
             } catch (err) {
               logger.error(

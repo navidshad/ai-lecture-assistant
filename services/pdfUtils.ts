@@ -43,10 +43,20 @@ export const parsePdf = async (file: File): Promise<ParsedSlide[]> => {
           const textContentItems = await page.getTextContent();
           const textContent = textContentItems.items.map((item: any) => item.str).join(' ');
 
+          // Detect if page has images
+          const operatorList = await page.getOperatorList();
+          const imageOps = [
+            pdfjsLib.OPS.paintImageXObject,
+            pdfjsLib.OPS.paintInlineImageXObject,
+            pdfjsLib.OPS.paintImageMaskXObject
+          ];
+          const hasImages = operatorList.fnArray.some((fn: number) => imageOps.includes(fn));
+
           slides.push({
             pageNumber: i,
             imageDataUrl,
             textContent,
+            hasImages,
           });
         }
         resolve(slides);

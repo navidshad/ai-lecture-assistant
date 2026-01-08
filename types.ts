@@ -2,6 +2,7 @@ export interface ParsedSlide {
   pageNumber: number;
   imageDataUrl: string;
   textContent: string;
+  hasImages: boolean;
 }
 
 export interface Slide extends ParsedSlide {

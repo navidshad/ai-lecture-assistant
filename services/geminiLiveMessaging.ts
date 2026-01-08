@@ -39,21 +39,27 @@ export const createSendMessage = ({
     const parts: any[] = [];
     
     if (slide) {
-      let imageData = slide.imageDataUrl;
-      if (imageSettings) {
-        try {
-          imageData = await processImage(imageData, imageSettings);
-        } catch (e) {
-          logger.warn(LOG_SOURCE, "Failed to process slide image, sending original.", e as any);
+      // Only send image if the slide actually has images to save tokens
+      if (slide.hasImages) {
+        let imageData = slide.imageDataUrl;
+        if (imageSettings) {
+          try {
+            imageData = await processImage(imageData, imageSettings);
+          } catch (e) {
+            logger.warn(LOG_SOURCE, "Failed to process slide image, sending original.", e as any);
+          }
         }
+        
+        const base64Data = imageData.split(",")[1];
+        if (base64Data) {
+          parts.push({
+            inlineData: { mimeType: "image/png", data: base64Data },
+          });
+        }
+      } else {
+        logger.debug(LOG_SOURCE, `Slide ${slide.pageNumber} is text-only. Skipping image payload.`);
       }
-      
-      const base64Data = imageData.split(",")[1];
-      if (base64Data) {
-        parts.push({
-          inlineData: { mimeType: "image/png", data: base64Data },
-        });
-      }
+
       if (slide.canvasContent && slide.canvasContent.length > 0) {
         parts.push({
           text: `Context: Canvas Content: ${JSON.stringify(slide.canvasContent)}`,
