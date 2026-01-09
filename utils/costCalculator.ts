@@ -1,14 +1,13 @@
 import { TokenUsage, UsageReport } from "../types";
 import {
   MODEL_REGISTRY,
-  DEFAULT_MODEL_COST,
 } from "../constants/modelCosts.static";
 
 export function calculateEstimatedCost(
   modelId: string,
   usage: TokenUsage
 ): number {
-  const modelDef = MODEL_REGISTRY[modelId] || DEFAULT_MODEL_COST;
+  const modelDef = MODEL_REGISTRY[modelId];
 
   const promptTokens = usage.promptTokens || 0;
   const completionTokens = usage.completionTokens || 0;

@@ -39,8 +39,3 @@ export const MODEL_CONFIGS = {
   MARKDOWN_FIXER: MODEL_REGISTRY["gemini-2.0-flash"].id,
   SLIDE_GROUPING: MODEL_REGISTRY["gemini-2.0-flash"].id,
 };
-
-export const DEFAULT_MODEL_COST = {
-  inputPer1M: 0.1,
-  outputPer1M: 0.4,
-};
