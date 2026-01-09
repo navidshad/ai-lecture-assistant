@@ -485,7 +485,7 @@ export const useGeminiLive = ({
             }
           },
           onmessage: async (message: LiveServerMessage) => {
-            console.log("Received event", message);
+            // console.log("Received event", message);
             
             // Ignore messages from older connections
             if (thisConnectSeq !== connectSeqRef.current) {

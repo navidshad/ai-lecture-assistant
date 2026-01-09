@@ -8,6 +8,7 @@ export function calculateEstimatedCost(
   usage: TokenUsage
 ): number {
   const modelDef = MODEL_REGISTRY[modelId];
+  if (!modelDef) return 0;
 
   const promptTokens = usage.promptTokens || 0;
   const completionTokens = usage.completionTokens || 0;
