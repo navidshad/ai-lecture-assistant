@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
   Slide,
   TranscriptEntry,
@@ -18,7 +18,7 @@ import SlideViewer from "../components/SlideViewer";
 import CanvasViewer from "../components/CanvasViewer";
 import Controls from "../components/Controls";
 import TranscriptPanel from "../components/TranscriptPanel";
-import { Power, PlayCircle } from "lucide-react";
+import { Power, PlayCircle, Star } from "lucide-react";
 import { logger } from "../services/logger";
 import TopBar from "../components/Lecture/TopBar";
 import TabNav from "../components/Lecture/TabNav";
@@ -30,6 +30,7 @@ import { groupSlidesByAI } from "../services/slideGrouper";
 import { MODEL_CONFIGS } from "../constants/modelCosts.static";
 import { useLocalStorage } from "../utils/storage";
 import { useAttachments } from "../hooks/useAttachments";
+import ToggleSwitch from "../components/ToggleSwitch";
 
 const OPTIMIZATION_STORAGE_KEY = "ai-lecture-assistant-optimization-settings";
 
@@ -80,6 +81,7 @@ const LecturePage: React.FC<LecturePageProps> = ({
   );
   const [isRectangleToolActive, setIsRectangleToolActive] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [showOnlyImportant, setShowOnlyImportant] = useState(false);
   const [forceTextOnly] = useLocalStorage<boolean>(
     "ai-lecture-assistant-force-text-only",
     session.lectureConfig.forceTextOnly ?? false
@@ -100,6 +102,29 @@ const LecturePage: React.FC<LecturePageProps> = ({
     removeAttachment,
     clearAttachments,
   } = useAttachments();
+
+  const hasImportantSlides = useMemo(() => slides.some((s) => s.isImportant), [
+    slides,
+  ]);
+
+  const displayedGroups = useMemo(() => {
+    if (!isGroupingEnabled || !slideGroups) return null;
+    if (!showOnlyImportant) return slideGroups;
+
+    return slideGroups
+      .map((group) => ({
+        ...group,
+        slideNumbers: group.slideNumbers.filter(
+          (n) => slides[n - 1]?.isImportant
+        ),
+      }))
+      .filter((group) => group.slideNumbers.length > 0);
+  }, [isGroupingEnabled, slideGroups, showOnlyImportant, slides]);
+
+  const displayedSlides = useMemo(() => {
+    if (!showOnlyImportant) return slides;
+    return slides.filter((s) => s.isImportant);
+  }, [slides, showOnlyImportant]);
 
   const setCurrentSlideIndex = (updater: React.SetStateAction<number>) => {
     _setCurrentSlideIndex((prevIndex) => {
@@ -713,29 +738,77 @@ const LecturePage: React.FC<LecturePageProps> = ({
       >
         {isSlidesVisible && (
           <>
-            <h2 className="text-sm font-semibold text-gray-400 p-2 flex-shrink-0">
-              {isGroupingEnabled ? "Slides (Grouped)" : "Slides"}
-            </h2>
+            <div className="p-2 flex-shrink-0 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-400">
+                {isGroupingEnabled ? "Slides (Grouped)" : "Slides"}
+              </h2>
+              {hasImportantSlides && (
+                <ToggleSwitch
+                  checked={showOnlyImportant}
+                  onChange={setShowOnlyImportant}
+                  icon={
+                    <Star
+                      className={`w-3.5 h-3.5 ${
+                        showOnlyImportant
+                          ? "text-yellow-500 fill-yellow-500"
+                          : "text-gray-400"
+                      }`}
+                    />
+                  }
+                  className="hover:bg-gray-700/30 p-1.5 rounded transition-colors"
+                  title={
+                    showOnlyImportant
+                      ? "Show all slides"
+                      : "Show only important slides"
+                  }
+                />
+              )}
+            </div>
             <div className="flex-1 space-y-2 overflow-y-auto">
               {isGroupingLoading ? (
                 <div className="text-xs text-gray-400 p-2">
                   Grouping slides…
                 </div>
-              ) : isGroupingEnabled && slideGroups ? (
+              ) : isGroupingEnabled && displayedGroups ? (
                 <GroupedSlidesThumbStrip
                   slides={slides}
-                  groups={slideGroups}
+                  groups={displayedGroups}
                   currentIndex={currentSlideIndex}
                   onSelect={handleSelectSlide}
                   onHover={setHoverPreviewIndex}
                 />
               ) : (
-                <SlidesThumbStrip
-                  slides={slides}
-                  currentIndex={currentSlideIndex}
-                  onSelect={handleSelectSlide}
-                  onHover={setHoverPreviewIndex}
-                />
+                <div className="space-y-2 px-1">
+                  <SlidesThumbStrip
+                    slides={displayedSlides}
+                    currentIndex={displayedSlides.findIndex(
+                      (s) => s.pageNumber === currentSlideIndex + 1
+                    )}
+                    onSelect={(index) => {
+                      const absoluteIndex = slides.indexOf(
+                        displayedSlides[index]
+                      );
+                      handleSelectSlide(absoluteIndex);
+                    }}
+                    onHover={(index) => {
+                      if (index === null) {
+                        setHoverPreviewIndex(null);
+                      } else {
+                        const absoluteIndex = slides.indexOf(
+                          displayedSlides[index]
+                        );
+                        setHoverPreviewIndex(absoluteIndex);
+                      }
+                    }}
+                  />
+                  {showOnlyImportant && displayedSlides.length === 0 && (
+                    <div className="text-center py-8 px-2">
+                      <p className="text-xs text-gray-500 italic">
+                        No slides marked as important.
+                      </p>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </>
