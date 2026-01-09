@@ -115,6 +115,7 @@ export const useGeminiLive = ({
     estimatedCost,
     trackLiveTurnUsage,
     addReport,
+    setBaseline,
   } = useUsageTracker(usageReports);
 
   // Session resumption tracking
@@ -320,6 +321,11 @@ export const useGeminiLive = ({
         userCustomPrompt,
         resumptionHandle: resumptionHandle,
       });
+
+      // Reset session baseline for usage tracking if not resuming
+      if (!resumptionHandle) {
+        setBaseline(0);
+      }
 
       // Reset user-ended flag when starting a new connection
       // (unless this is an explicit user end, which is handled in end())

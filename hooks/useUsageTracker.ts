@@ -84,11 +84,20 @@ export const useUsageTracker = (initialReports: UsageReport[]) => {
     setReports((prev) => [...prev, report]);
   }, []);
 
+  /**
+   * Resets or sets the usage baseline for delta calculations.
+   * Useful when starting a new connection session.
+   */
+  const setBaseline = useCallback((value: number) => {
+    previousSessionTotalTokensRef.current = value;
+  }, []);
+
   return {
     reports,
     estimatedCost,
     trackLiveTurnUsage,
     addReport,
+    setBaseline,
     setReports,
   };
 };
