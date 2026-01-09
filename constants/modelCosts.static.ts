@@ -13,11 +13,11 @@ export const MODEL_REGISTRY: Record<string, ModelDefinition> = {
     id: "gemini-2.5-flash-native-audio-preview-09-2025",
     name: "Gemini 2.5 Flash Native Audio",
     type: "live",
-    inputPer1M: 0.1,
-    outputPer1M: 0.4,
+    inputPer1M: 3,
+    outputPer1M: 12,
   },
-  "gemini-2.0-flash-exp": {
-    id: "gemini-2.0-flash-exp",
+  "gemini-2.0-flash": {
+    id: "gemini-2.0-flash",
     name: "Gemini 2.0 Flash",
     type: "auxiliary",
     inputPer1M: 0.1,
@@ -28,7 +28,7 @@ export const MODEL_REGISTRY: Record<string, ModelDefinition> = {
     name: "Gemini 2.5 Pro (Plan Gen)",
     type: "auxiliary",
     inputPer1M: 1.25,
-    outputPer1M: 5.0,
+    outputPer1M: 10,
   },
 };
 
@@ -36,8 +36,8 @@ export const MODELS = Object.values(MODEL_REGISTRY);
 
 export const MODEL_CONFIGS = {
   PLAN_GENERATION: MODEL_REGISTRY["gemini-2.5-pro"].id,
-  MARKDOWN_FIXER: MODEL_REGISTRY["gemini-2.0-flash-exp"].id,
-  SLIDE_GROUPING: MODEL_REGISTRY["gemini-2.0-flash-exp"].id,
+  MARKDOWN_FIXER: MODEL_REGISTRY["gemini-2.0-flash"].id,
+  SLIDE_GROUPING: MODEL_REGISTRY["gemini-2.0-flash"].id,
 };
 
 export const DEFAULT_MODEL_COST = {
