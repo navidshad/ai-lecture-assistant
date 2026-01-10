@@ -11,7 +11,6 @@ import {
 } from "../types";
 import { useGeminiLive } from "../hooks/useGeminiLive";
 import { useToast } from "../hooks/useToast";
-import { sessionManager } from "../services/db";
 import ConfigModal from "../components/ConfigModal";
 import { VOICES } from "../constants/voices";
 import SlideViewer from "../components/SlideViewer";
@@ -27,7 +26,6 @@ import SlidesThumbStrip from "../components/Lecture/SlidesThumbStrip";
 import { useSessionPersistence } from "../hooks/useSessionPersistence";
 import GroupedSlidesThumbStrip from "../components/Lecture/GroupedSlidesThumbStrip";
 import { groupSlidesByAI } from "../services/slideGrouper";
-import { MODEL_CONFIGS } from "../constants/modelCosts.static";
 import { useLocalStorage } from "../utils/storage";
 import { useAttachments } from "../hooks/useAttachments";
 import ToggleSwitch from "../components/ToggleSwitch";
@@ -67,7 +65,6 @@ const LecturePage: React.FC<LecturePageProps> = ({
   const [isSlidesVisible, setIsSlidesVisible] = useState(false);
 
   const [activeTab, setActiveTab] = useState<"slide" | "canvas">("slide");
-  const lastFixSignatureRef = useRef<string | null>(null);
   const [slideGroups, setSlideGroups] = useState<SlideGroup[] | null>(
     session.slideGroups ?? null
   );
@@ -125,6 +122,14 @@ const LecturePage: React.FC<LecturePageProps> = ({
     if (!showOnlyImportant) return slides;
     return slides.filter((s) => s.isImportant);
   }, [slides, showOnlyImportant]);
+
+  const totalImportantCount = useMemo(() => slides.filter(s => s.isImportant).length, [slides]);
+  
+  const currentImportantIndex = useMemo(() => {
+    const importantSlides = slides.filter(s => s.isImportant);
+    const index = importantSlides.findIndex(s => s.pageNumber === currentSlideIndex + 1);
+    return index !== -1 ? index + 1 : null;
+  }, [slides, currentSlideIndex]);
 
   const setCurrentSlideIndex = (updater: React.SetStateAction<number>) => {
     _setCurrentSlideIndex((prevIndex) => {
@@ -586,6 +591,9 @@ const LecturePage: React.FC<LecturePageProps> = ({
           estimatedCost={estimatedCost}
           onViewReport={onViewReport}
           onOpenSettings={() => setIsConfigOpen(true)}
+          showImportantFilter={showOnlyImportant}
+          currentImportantIndex={currentImportantIndex ?? undefined}
+          totalImportantCount={totalImportantCount}
         />
 
         <div className="flex-1 flex flex-col relative overflow-hidden">

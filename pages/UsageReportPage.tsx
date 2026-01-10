@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { LectureSession, UsageReport } from "../types";
 import { calculateEstimatedCost, formatCost } from "../utils/costCalculator";
-import { ArrowLeft, BarChart3, Clock, Cpu, Tag, DollarSign, Activity } from "lucide-react";
+import { ArrowLeft, BarChart3, Clock, Cpu, Tag, Activity } from "lucide-react";
 
 interface UsageReportPageProps {
   session: LectureSession;

@@ -9,6 +9,9 @@ const TopBar: React.FC<{
   estimatedCost?: number;
   onViewReport?: () => void;
   onOpenSettings?: () => void;
+  showImportantFilter?: boolean;
+  currentImportantIndex?: number;
+  totalImportantCount?: number;
 }> = ({ 
   fileName, 
   currentSlide, 
@@ -16,6 +19,9 @@ const TopBar: React.FC<{
   estimatedCost, 
   onViewReport,
   onOpenSettings,
+  showImportantFilter,
+  currentImportantIndex,
+  totalImportantCount,
 }) => {
   return (
     <header className="flex-shrink-0 bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 p-4 flex items-center justify-between z-20">
@@ -48,8 +54,14 @@ const TopBar: React.FC<{
           </button>
         )}
       </div>
-      <div className="text-sm text-gray-400 flex-shrink-0">
-        Slide {currentSlide} of {totalSlides}
+      <div className="flex flex-col items-end text-sm text-gray-400 flex-shrink-0">
+        <div>Slide {currentSlide} of {totalSlides}</div>
+        {showImportantFilter && totalImportantCount !== undefined && (
+          <div className="text-yellow-500 font-bold text-[10px] uppercase tracking-wider flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+            Important: {currentImportantIndex || '-'} / {totalImportantCount}
+          </div>
+        )}
       </div>
     </header>
   );
