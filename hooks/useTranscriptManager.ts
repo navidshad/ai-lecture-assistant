@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback } from "react";
 import { Dispatch, SetStateAction } from "react";
 import { TranscriptEntry, ChatAttachment } from "../types";
 
@@ -97,6 +97,23 @@ export const useTranscriptManager = ({
     [setTranscript]
   );
 
-  return { addTranscriptEntry, setEntryCost };
+  const setEntryAudio = useCallback(
+    (audioBase64: string, speaker: "ai" | "user") => {
+      setTranscript((prev) => {
+        const next = [...prev];
+        // Find the last entry by this speaker to update
+        for (let i = next.length - 1; i >= 0; i--) {
+          if (next[i].speaker === speaker) {
+            next[i].audioBase64 = audioBase64;
+            break;
+          }
+        }
+        return next;
+      });
+    },
+    [setTranscript]
+  );
+
+  return { addTranscriptEntry, setEntryCost, setEntryAudio };
 };
 

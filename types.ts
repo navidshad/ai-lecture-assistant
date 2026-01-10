@@ -77,6 +77,7 @@ export interface TranscriptEntry {
   slideNumber?: number;
   attachments?: ChatAttachment[];
   estimatedCost?: number;
+  audioBase64?: string;
 }
 
 export type CanvasBlockType = "markdown" | "diagram" | "ascii" | "table";

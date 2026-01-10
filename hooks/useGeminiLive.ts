@@ -1,5 +1,4 @@
 import {
-  useState,
   useEffect,
   useRef,
   useCallback,
@@ -43,6 +42,7 @@ import {
   getResumptionHandle,
   clearResumptionHandle,
 } from "../services/sessionResumption";
+import { decode, encode, pcmToWav } from "../services/audioUtils";
 
 const LOG_SOURCE = "useGeminiLive";
 
@@ -103,6 +103,7 @@ export const useGeminiLive = ({
   const audioSourcesRef = useRef(new Set<AudioBufferSourceNode>());
   const isMutedRef = useRef(isMuted);
   const aiMessageOpenRef = useRef(false);
+  const audioBufferRef = useRef<Uint8Array[]>([]);
   const currentSlideIndexRef = useRef(currentSlideIndex);
   // Track if the underlying websocket/session is open to prevent sending on a closed socket
   const sessionOpenRef = useRef(false);
@@ -194,7 +195,7 @@ export const useGeminiLive = ({
   }, [runWithOpenSession]);
 
   // Use extracted transcript manager
-  const { addTranscriptEntry, setEntryCost } = useTranscriptManager({
+  const { addTranscriptEntry, setEntryCost, setEntryAudio } = useTranscriptManager({
     setTranscript,
     currentSlideIndexRef,
     aiMessageOpenRef,
@@ -249,6 +250,26 @@ export const useGeminiLive = ({
     },
     []
   );
+
+  const finalizeAITurn = useCallback(() => {
+    if (audioBufferRef.current.length > 0) {
+      const totalLength = audioBufferRef.current.reduce(
+        (acc, chunk) => acc + chunk.length,
+        0
+      );
+      const fullPcm = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const chunk of audioBufferRef.current) {
+        fullPcm.set(chunk, offset);
+        offset += chunk.length;
+      }
+      const wav = pcmToWav(fullPcm, 24000);
+      const base64 = encode(wav);
+      setEntryAudio(base64, "ai");
+      audioBufferRef.current = [];
+    }
+    aiMessageOpenRef.current = false;
+  }, [setEntryAudio]);
 
   // Sends image + optional canvas context + text instruction as ONE coherent turn.
   // (removed) sendCombinedImageAndTextTurn – unified into sendMessage
@@ -731,12 +752,15 @@ export const useGeminiLive = ({
             const audioData =
               message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
             if (audioData) {
+              // Accumulate audio for replay
+              const decoded = decode(audioData);
+              audioBufferRef.current.push(decoded);
               await handleAudioPlayback(audioData, audioRefs);
             }
 
             if (message.serverContent?.generationComplete) {
               // Primary delimiter: model finished generating this response
-              aiMessageOpenRef.current = false;
+              finalizeAITurn();
               // Periodically re-anchor to the active slide during long conversations
               if (REANCHOR_EVERY_N_TURNS > 0) {
                 turnCounterRef.current += 1;
@@ -751,7 +775,7 @@ export const useGeminiLive = ({
 
             if (message.serverContent?.turnComplete) {
               // Backup delimiter
-              aiMessageOpenRef.current = false;
+              finalizeAITurn();
             }
 
             if (message.serverContent?.interrupted) {
