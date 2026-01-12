@@ -17,7 +17,7 @@ import SlideViewer from "../components/SlideViewer";
 import CanvasViewer from "../components/CanvasViewer";
 import Controls from "../components/Controls";
 import TranscriptPanel from "../components/TranscriptPanel";
-import { Power, PlayCircle, Star } from "lucide-react";
+import { Power, PlayCircle, Star, RotateCw } from "lucide-react";
 import { logger } from "../services/logger";
 import TopBar from "../components/Lecture/TopBar";
 import TabNav from "../components/Lecture/TabNav";
@@ -526,6 +526,25 @@ const LecturePage: React.FC<LecturePageProps> = ({
     [sendMessage, setTranscript, clearAttachments, currentSlideIndex]
   );
 
+  const handleRefreshGrouping = useCallback(async () => {
+    if (isGroupingLoading) return;
+    try {
+      setIsGroupingLoading(true);
+      const groups = await groupSlidesByAI({
+        slides,
+        apiKey,
+        onReportUsage: addReport,
+      });
+      setSlideGroups(groups);
+      showToast("Slides regrouped successfully", "success");
+    } catch (e) {
+      logger.warn(LOG_SOURCE, "Slide grouping refresh failed", e as any);
+      showToast("Failed to regroup slides", "error");
+    } finally {
+      setIsGroupingLoading(false);
+    }
+  }, [slides, apiKey, addReport, showToast, isGroupingLoading]);
+
   const handleEndSession = useCallback(async () => {
     logger.log(LOG_SOURCE, "handleEndSession called. Forcing final save.");
     await saveSessionState();
@@ -750,27 +769,43 @@ const LecturePage: React.FC<LecturePageProps> = ({
               <h2 className="text-sm font-semibold text-gray-400">
                 {isGroupingEnabled ? "Slides (Grouped)" : "Slides"}
               </h2>
-              {hasImportantSlides && (
-                <ToggleSwitch
-                  checked={showOnlyImportant}
-                  onChange={setShowOnlyImportant}
-                  icon={
-                    <Star
+              <div className="flex items-center gap-1">
+                {isGroupingEnabled && slideGroups && (
+                  <button
+                    onClick={handleRefreshGrouping}
+                    disabled={isGroupingLoading}
+                    className="p-1.5 rounded transition-colors hover:bg-gray-700/30 text-gray-400 hover:text-white disabled:opacity-50"
+                    title="Refresh slide grouping"
+                  >
+                    <RotateCw
                       className={`w-3.5 h-3.5 ${
-                        showOnlyImportant
-                          ? "text-yellow-500 fill-yellow-500"
-                          : "text-gray-400"
+                        isGroupingLoading ? "animate-spin" : ""
                       }`}
                     />
-                  }
-                  className="hover:bg-gray-700/30 p-1.5 rounded transition-colors"
-                  title={
-                    showOnlyImportant
-                      ? "Show all slides"
-                      : "Show only important slides"
-                  }
-                />
-              )}
+                  </button>
+                )}
+                {hasImportantSlides && (
+                  <ToggleSwitch
+                    checked={showOnlyImportant}
+                    onChange={setShowOnlyImportant}
+                    icon={
+                      <Star
+                        className={`w-3.5 h-3.5 ${
+                          showOnlyImportant
+                            ? "text-yellow-500 fill-yellow-500"
+                            : "text-gray-400"
+                        }`}
+                      />
+                    }
+                    className="hover:bg-gray-700/30 p-1.5 rounded transition-colors"
+                    title={
+                      showOnlyImportant
+                        ? "Show all slides"
+                        : "Show only important slides"
+                    }
+                  />
+                )}
+              </div>
             </div>
             <div className="flex-1 space-y-2 overflow-y-auto">
               {isGroupingLoading ? (

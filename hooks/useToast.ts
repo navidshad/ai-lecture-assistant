@@ -3,12 +3,12 @@ import React, { createContext, useState, useContext, useCallback, ReactNode } fr
 export interface Toast {
   id: number;
   message: string;
-  type: 'error'; // Only error toasts are needed for now
+  type: 'error' | 'success';
 }
 
 interface ToastContextType {
   toasts: Toast[];
-  showToast: (message: string, type?: 'error') => void;
+  showToast: (message: string, type?: 'error' | 'success') => void;
   removeToast: (id: number) => void;
 }
 
@@ -29,7 +29,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
   }, []);
 
-  const showToast = useCallback((message: string, type: 'error' = 'error') => {
+  const showToast = useCallback((message: string, type: 'error' | 'success' = 'error') => {
     const newToast = {
       id: Date.now() + Math.random(),
       message,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, X } from 'lucide-react';
 import { Toast as ToastType } from '../hooks/useToast';
 
 interface ToastProps {
@@ -9,10 +9,12 @@ interface ToastProps {
 
 const icons = {
   error: <AlertTriangle className="h-6 w-6 text-red-300" />,
+  success: <CheckCircle className="h-6 w-6 text-green-400" />,
 };
 
 const bgColors = {
   error: 'bg-red-900/90 border-red-700/50 backdrop-blur-sm',
+  success: 'bg-green-900/90 border-green-700/50 backdrop-blur-sm',
 };
 
 const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
@@ -25,7 +27,7 @@ const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
           </div>
           <div className="ml-3 flex-1">
             <p className="text-sm font-medium text-white">
-              AI Assistant Error
+              {toast.type === 'error' ? 'AI Assistant Error' : 'AI Assistant'}
             </p>
             <p className="mt-1 text-sm text-gray-300">
               {toast.message}
