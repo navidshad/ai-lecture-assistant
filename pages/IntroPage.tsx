@@ -29,6 +29,7 @@ const GROUP_SLIDES_STORAGE_KEY = "ai-lecture-assistant-group-slides";
 const MARK_IMPORTANT_STORAGE_KEY = "ai-lecture-assistant-mark-important";
 const FORCE_TEXT_ONLY_STORAGE_KEY = "ai-lecture-assistant-force-text-only";
 const OPTIMIZATION_STORAGE_KEY = "ai-lecture-assistant-optimization-settings";
+const BATCH_SIZE_STORAGE_KEY = "ai-lecture-assistant-batch-size";
 
 const IntroPage: React.FC<IntroPageProps> = ({
   onLectureStart,
@@ -38,7 +39,7 @@ const IntroPage: React.FC<IntroPageProps> = ({
   onShowSessions,
 }) => {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const [selectedLanguage, setSelectedLanguage] = useLocalStorage<string>(
     LANGUAGE_STORAGE_KEY,
@@ -77,6 +78,11 @@ const IntroPage: React.FC<IntroPageProps> = ({
     { maxDimension: 256, grayscale: true }
   );
 
+  const [batchSize, setBatchSize] = useLocalStorage<number>(
+    BATCH_SIZE_STORAGE_KEY,
+    3
+  );
+
   // Ensure language remains valid if list updates
   useEffect(() => {
     if (!SUPPORTED_LANGUAGES.some((l) => l.title === selectedLanguage)) {
@@ -97,24 +103,27 @@ const IntroPage: React.FC<IntroPageProps> = ({
 
   const handleFileChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (file) {
-        logger.log(LOG_SOURCE, "File selected:", file.name);
-        setSelectedFile(file);
+      const files = event.target.files;
+      if (files && files.length > 0) {
+        const fileList = Array.from(files);
+        logger.log(LOG_SOURCE, "Files selected:", fileList.map(f => f.name).join(", "));
+        setSelectedFiles(fileList);
       }
     },
     []
   );
 
   const handleStartLecture = useCallback(async () => {
-    if (!selectedFile) return;
+    if (selectedFiles.length === 0) return;
 
     try {
       logger.debug(LOG_SOURCE, "Starting session creation workflow...");
-      const newSession = await createSessionFromPdf(selectedFile);
+      const newSession = await createSessionFromPdf(selectedFiles as any); // Type cast until hook is updated
+      
       // Inject optimization settings into the session config
       newSession.lectureConfig.imageOptimization = imageOptimization;
       newSession.lectureConfig.forceTextOnly = forceTextOnly;
+      newSession.lectureConfig.batchSize = batchSize;
 
       logger.log(LOG_SOURCE, "Creating new session in DB.", {
         id: newSession.id,
@@ -122,14 +131,14 @@ const IntroPage: React.FC<IntroPageProps> = ({
       await sessionManager.addSession(newSession);
       logger.log(
         LOG_SOURCE,
-        "Successfully processed file. Starting lecture."
+        "Successfully processed file(s). Starting lecture."
       );
       onLectureStart(newSession);
     } catch (err) {
-      logger.error(LOG_SOURCE, "Failed to process PDF.", err as any);
+      logger.error(LOG_SOURCE, "Failed to process PDF(s).", err as any);
       console.error(err);
     }
-  }, [selectedFile, createSessionFromPdf, imageOptimization, forceTextOnly, onLectureStart]);
+  }, [selectedFiles, createSessionFromPdf, imageOptimization, forceTextOnly, batchSize, onLectureStart]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-gray-200 p-4 relative">
@@ -262,7 +271,7 @@ const IntroPage: React.FC<IntroPageProps> = ({
       </div>
 
       <div className="w-full max-w-2xl space-y-6">
-        {!selectedFile && (
+        {selectedFiles.length === 0 && (
           <FileUploadBox
             isLoading={isLoading}
             loadingText={loadingText}
@@ -272,23 +281,27 @@ const IntroPage: React.FC<IntroPageProps> = ({
           />
         )}
 
-        {selectedFile && (
+        {selectedFiles.length > 0 && (
           <div className="flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex items-center gap-2 px-4 py-2 bg-gray-800 rounded-lg border border-gray-700 shadow-inner">
-                <FileText className="h-5 w-5 text-blue-400" />
-                <span className="text-gray-200 font-medium truncate max-w-xs">
-                  {selectedFile.name}
-                </span>
+            <div className="flex flex-col items-center gap-3 mb-6 w-full">
+              <div className="flex flex-wrap justify-center gap-2 max-w-xl">
+                {selectedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-lg border border-gray-700 shadow-inner">
+                    <FileText className="h-4 w-4 text-blue-400" />
+                    <span className="text-gray-200 text-sm font-medium truncate max-w-[150px]">
+                      {file.name}
+                    </span>
+                  </div>
+                ))}
               </div>
               {!isLoading && (
                 <button
-                  onClick={() => setSelectedFile(null)}
+                  onClick={() => setSelectedFiles([])}
                   className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
-                  title="Change File"
+                  title="Clear Files"
                 >
                   <RefreshCcw className="h-4 w-4" />
-                  <span>Change</span>
+                  <span>Clear All</span>
                 </button>
               )}
             </div>
@@ -312,7 +325,7 @@ const IntroPage: React.FC<IntroPageProps> = ({
                   <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>
                 <p className="mt-3 text-xs text-gray-500 uppercase tracking-widest">
-                  Ready to process {Math.round(selectedFile.size / 1024)} KB
+                  Ready to process {selectedFiles.length} file(s) ({Math.round(selectedFiles.reduce((acc, f) => acc + f.size, 0) / 1024)} KB)
                 </p>
               </>
             )}
@@ -333,6 +346,8 @@ const IntroPage: React.FC<IntroPageProps> = ({
         onApiKeyRemove={onApiKeyRemove}
         imageOptimization={imageOptimization}
         onImageOptimizationChange={setImageOptimization}
+        batchSize={batchSize}
+        onBatchSizeChange={setBatchSize}
       />
     </div>
   );
