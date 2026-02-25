@@ -31,8 +31,9 @@ const extractTextFromChildren = (children: React.ReactNode): string => {
     return children.map(extractTextFromChildren).join("");
   }
   if (React.isValidElement(children)) {
-    if (children.props?.children) {
-      return extractTextFromChildren(children.props.children);
+    const props = children.props as any;
+    if (props?.children) {
+      return extractTextFromChildren(props.children);
     }
     return "";
   }
@@ -93,7 +94,7 @@ const renderTextWithInlineMath = (text: string): React.ReactNode[] => {
   return parts;
 };
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ markdown }) => {
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(({ markdown }) => {
   // Split markdown into segments: markdown text and block math expressions
   const segments = useMemo(() => {
     const result: ContentSegment[] = [];
@@ -200,6 +201,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ markdown }) => {
         "loading",
         "width",
         "height",
+        "alt",
       ],
       a: [...(defaultSchema.attributes?.a || []), "rel", "target"],
     },
@@ -372,7 +374,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ markdown }) => {
                 td: ({ node, ...props }) => (
                   <td className="border border-gray-700 px-4 py-2" {...props} />
                 ),
-                code({ node, inline, className, children, ...props }) {
+                code({ node, className, children, ...props }) {
                   const match = /language-(\w+)/.exec(className || "");
                   const language = match ? match[1] : "";
                   const codeString = extractTextFromChildren(children).replace(
@@ -384,7 +386,9 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ markdown }) => {
                     return <Mermaid content={codeString} />;
                   }
 
-                  if (inline) {
+                  const isInline = !codeString.includes("\n");
+
+                  if (isInline) {
                     return (
                       <code
                         className={`${
@@ -457,6 +461,6 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ markdown }) => {
       })}
     </div>
   );
-};
+});
 
 export default MarkdownRenderer;

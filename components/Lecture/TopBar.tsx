@@ -12,7 +12,7 @@ const TopBar: React.FC<{
   showImportantFilter?: boolean;
   currentImportantIndex?: number;
   totalImportantCount?: number;
-}> = ({ 
+}> = React.memo(({ 
   fileName, 
   currentSlide, 
   totalSlides, 
@@ -65,6 +65,6 @@ const TopBar: React.FC<{
       </div>
     </header>
   );
-};
+});
 
 export default TopBar;

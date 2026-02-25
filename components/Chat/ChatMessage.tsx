@@ -18,7 +18,7 @@ interface ChatMessageProps {
   onAudioEnded: () => void;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({
+const ChatMessage: React.FC<ChatMessageProps> = React.memo(({
   entry,
   index,
   isDesktop,
@@ -134,6 +134,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default ChatMessage;

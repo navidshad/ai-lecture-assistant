@@ -457,6 +457,14 @@ const LecturePage: React.FC<LecturePageProps> = ({
     [addSelection]
   );
 
+  const handleOpenSettings = useCallback(() => {
+    setIsConfigOpen(true);
+  }, []);
+
+  const handleCloseSettings = useCallback(() => {
+    setIsConfigOpen(false);
+  }, []);
+
   const handleNext = useCallback(() => {
     logger.debug(LOG_SOURCE, "handleNext called.");
     if (currentSlideIndex < slides.length - 1) {
@@ -611,7 +619,7 @@ const LecturePage: React.FC<LecturePageProps> = ({
           totalSlides={slides.length}
           estimatedCost={estimatedCost}
           onViewReport={onViewReport}
-          onOpenSettings={() => setIsConfigOpen(true)}
+          onOpenSettings={handleOpenSettings}
           showImportantFilter={showOnlyImportant}
           currentImportantIndex={currentImportantIndex ?? undefined}
           totalImportantCount={totalImportantCount}
@@ -862,7 +870,7 @@ const LecturePage: React.FC<LecturePageProps> = ({
 
       <ConfigModal
         isOpen={isConfigOpen}
-        onClose={() => setIsConfigOpen(false)}
+        onClose={handleCloseSettings}
         selectedVoice={session.lectureConfig.voice}
         onVoiceChange={() => {}} // Voice change not yet supported mid-session
         voices={VOICES}
