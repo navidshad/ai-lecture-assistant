@@ -13,7 +13,7 @@ interface ToolboxProps {
  * Extensible for adding more tools in the future
  * Hidden on mobile devices
  */
-const Toolbox: React.FC<ToolboxProps> = ({
+const Toolbox: React.FC<ToolboxProps> = React.memo(({
   isRectangleToolActive,
   onRectangleToolToggle,
   onToolActivate,
@@ -47,7 +47,7 @@ const Toolbox: React.FC<ToolboxProps> = ({
       {/* Future tools can be added here */}
     </div>
   );
-};
+});
 
 export default Toolbox;
 

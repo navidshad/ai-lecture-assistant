@@ -43,6 +43,7 @@ import {
   clearResumptionHandle,
 } from "../services/sessionResumption";
 import { decode, encode, pcmToWav } from "../services/audioUtils";
+import { calculateEstimatedCost } from "../utils/costCalculator";
 
 const LOG_SOURCE = "useGeminiLive";
 
@@ -297,8 +298,7 @@ export const useGeminiLive = ({
     (reconnectionType?: "disconnected" | "saved" | "new") => {
       logger.log(
         LOG_SOURCE,
-        `startLecture() called with reconnectionType: ${
-          reconnectionType || "new"
+        `startLecture() called with reconnectionType: ${reconnectionType || "new"
         }.`
       );
       if (slides.length === 0) {
@@ -403,9 +403,9 @@ export const useGeminiLive = ({
                       : null,
                     currentSlide.textContent
                       ? `TEXT EXCERPT: ${currentSlide.textContent.slice(
-                          0,
-                          1000
-                        )}`
+                        0,
+                        1000
+                      )}`
                       : null,
                     recentMessages
                       ? `RECENT CONTEXT FROM THIS SLIDE:\n${recentMessages}`
@@ -436,7 +436,7 @@ export const useGeminiLive = ({
                 // For a new lecture, send the initial image (if any) + plan + instruction as a single turn
                 const firstSlide = slides[0];
                 const parts: any[] = [];
-                
+
                 if (firstSlide.hasImages && !forceTextOnly) {
                   const base64Data = firstSlide.imageDataUrl.split(",")[1];
                   if (base64Data) {
@@ -507,7 +507,7 @@ export const useGeminiLive = ({
           },
           onmessage: async (message: LiveServerMessage) => {
             // console.log("Received event", message);
-            
+
             // Ignore messages from older connections
             if (thisConnectSeq !== connectSeqRef.current) {
               return;
@@ -529,30 +529,26 @@ export const useGeminiLive = ({
             }
 
             // Handle usage metadata
-            
+
             if ((message as any).usageMetadata) {
               const usageData = (message as any).usageMetadata;
 
               // Calculate incremental cost for the current AI turn
-              import("../utils/costCalculator").then(
-                ({ calculateEstimatedCost }) => {
-                  const isFinal = (message as any).serverContent?.turnComplete === true;
-                  const turnUsage = trackLiveTurnUsage({
-                    modelId: selectedModel,
-                    usageMetadata: usageData,
-                    isFinal,
-                    tag: `slide_conversation:${currentSlideIndexRef.current + 1}`,
-                  });
+              const isFinal = (message as any).serverContent?.turnComplete === true;
+              const turnUsage = trackLiveTurnUsage({
+                modelId: selectedModel,
+                usageMetadata: usageData,
+                isFinal,
+                tag: `slide_conversation:${currentSlideIndexRef.current + 1}`,
+              });
 
-                  const turnCost = calculateEstimatedCost(
-                    selectedModel,
-                    turnUsage
-                  );
-                  if (turnCost > 0) {
-                    setEntryCost(turnCost, "ai");
-                  }
-                }
+              const turnCost = calculateEstimatedCost(
+                selectedModel,
+                turnUsage
               );
+              if (turnCost > 0) {
+                setEntryCost(turnCost, "ai");
+              }
             }
 
             // Handle GoAway messages (connection will terminate soon)
@@ -891,8 +887,8 @@ export const useGeminiLive = ({
                 reconnectionAttemptsRef.current >= MAX_RECONNECTION_ATTEMPTS
                   ? "Connection lost after multiple reconnection attempts. Please try reconnecting manually."
                   : e.wasClean
-                  ? "Connection closed."
-                  : "The connection was lost unexpectedly. Please reconnect."
+                    ? "Connection closed."
+                    : "The connection was lost unexpectedly. Please reconnect."
               );
               cleanupConnectionResources();
               setSessionState(LectureSessionState.DISCONNECTED);

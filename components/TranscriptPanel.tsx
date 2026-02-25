@@ -19,7 +19,7 @@ interface TranscriptPanelProps {
   onClearAttachments: () => void;
 }
 
-const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
+const TranscriptPanel: React.FC<TranscriptPanelProps> = React.memo(({
   isVisible,
   onClose,
   transcript,
@@ -211,6 +211,6 @@ const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default TranscriptPanel;

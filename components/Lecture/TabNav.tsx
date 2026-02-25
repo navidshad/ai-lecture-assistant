@@ -5,7 +5,7 @@ type TabName = "slide" | "canvas";
 const TabNav: React.FC<{
   activeTab: TabName;
   onChange: (tab: TabName) => void;
-}> = ({ activeTab, onChange }) => {
+}> = React.memo(({ activeTab, onChange }) => {
   const tabButtonClasses = (tabName: TabName) =>
     `px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none ${
       activeTab === tabName
@@ -31,6 +31,6 @@ const TabNav: React.FC<{
       </nav>
     </div>
   );
-};
+});
 
 export default TabNav;

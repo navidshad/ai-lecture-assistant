@@ -26,7 +26,7 @@ const StateOverlay: React.FC<{
   </div>
 );
 
-const SlideViewer: React.FC<SlideViewerProps> = ({
+const SlideViewer: React.FC<SlideViewerProps> = React.memo(({
   slide,
   sessionState,
   error,
@@ -140,6 +140,6 @@ const SlideViewer: React.FC<SlideViewerProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default SlideViewer;
