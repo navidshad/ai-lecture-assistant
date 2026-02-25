@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.0](https://github.com/navidshad/ai-lecture-assistant/compare/v1.0.0...v1.1.0) (2026-02-25)
+
+
+### Features
+
+* Add GitHub Actions workflow and template for automated pull request description generation. ([dfc010a](https://github.com/navidshad/ai-lecture-assistant/commit/dfc010a8b470165bafa252255d7f2b25685d6d1a))
+* Add support for processing multiple PDF files to generate a combined lecture plan. ([f002d08](https://github.com/navidshad/ai-lecture-assistant/commit/f002d084baac0e1fa61b1f6bbb01f72f7a812fa1))
+* Implement AI-powered slide grouping for lecture plans and display total session costs on the sessions page. ([1c5ca68](https://github.com/navidshad/ai-lecture-assistant/commit/1c5ca687084d13f2a38fc233c8ce26ed1d07db41))
+
 ## 1.0.0 (2026-02-25)
 
 
