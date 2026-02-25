@@ -1,4 +1,4 @@
-import { LectureSession } from '../types';
+import { LectureSession, LectureSessionMetadata } from '../types';
 
 const DB_NAME = 'AI-Lecture-Assistant-DB';
 const DB_VERSION = 1;
@@ -56,7 +56,7 @@ export const sessionManager = {
       transaction.onerror = () => reject(transaction.error);
     });
   },
-  
+
   async getSession(id: string): Promise<LectureSession | undefined> {
     const db = await getDB();
     return new Promise((resolve, reject) => {
@@ -83,6 +83,47 @@ export const sessionManager = {
     });
   },
 
+  async getAllSessionsMetadata(): Promise<LectureSessionMetadata[]> {
+    const db = await getDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const index = store.index('createdAt');
+      const sessions: LectureSessionMetadata[] = [];
+
+      const request = index.openCursor(null, 'prev'); // Open cursor in reverse order (newest first)
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          const session = cursor.value as LectureSession;
+          // Extract only metadata to avoid loading heavy blobs
+          sessions.push({
+            id: session.id,
+            fileName: session.fileName,
+            fileNames: session.fileNames,
+            createdAt: session.createdAt,
+            lectureConfig: {
+              language: session.lectureConfig.language,
+              voice: session.lectureConfig.voice,
+              model: session.lectureConfig.model,
+              prompt: session.lectureConfig.prompt,
+            },
+            usageReports: session.usageReports,
+            slidesCount: session.slides.length,
+            generalInfo: session.generalInfo,
+            currentSlideIndex: session.currentSlideIndex,
+            slideGroups: session.slideGroups,
+          });
+          cursor.continue();
+        } else {
+          resolve(sessions);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  },
+
   async deleteSession(id: string): Promise<void> {
     const db = await getDB();
     return new Promise((resolve, reject) => {
@@ -93,7 +134,7 @@ export const sessionManager = {
       transaction.onerror = () => reject(transaction.error);
     });
   },
-  
+
   async clearAllSessions(): Promise<void> {
     const db = await getDB();
     return new Promise((resolve, reject) => {

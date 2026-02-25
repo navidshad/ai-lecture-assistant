@@ -100,6 +100,8 @@ const IntroPage: React.FC<IntroPageProps> = ({
       userCustomPrompt,
       markImportantSlides,
       groupSlides,
+      imageOptimization,
+      forceTextOnly,
     });
 
   const handleFileChange = useCallback(
@@ -121,11 +123,6 @@ const IntroPage: React.FC<IntroPageProps> = ({
       logger.debug(LOG_SOURCE, "Starting session creation workflow...");
       const newSession = await createSessionFromPdf(selectedFiles as any); // Type cast until hook is updated
       
-      // Inject optimization settings into the session config
-      newSession.lectureConfig.imageOptimization = imageOptimization;
-      newSession.lectureConfig.forceTextOnly = forceTextOnly;
-      newSession.lectureConfig.batchSize = batchSize;
-
       logger.log(LOG_SOURCE, "Creating new session in DB.", {
         id: newSession.id,
       });
@@ -139,7 +136,7 @@ const IntroPage: React.FC<IntroPageProps> = ({
       logger.error(LOG_SOURCE, "Failed to process PDF(s).", err as any);
       console.error(err);
     }
-  }, [selectedFiles, createSessionFromPdf, imageOptimization, forceTextOnly, batchSize, onLectureStart]);
+  }, [selectedFiles, createSessionFromPdf, onLectureStart]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-gray-200 p-4 relative">
