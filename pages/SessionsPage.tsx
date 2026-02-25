@@ -6,6 +6,7 @@ import { logger } from "../services/logger";
 import { setLocalStorage } from "../utils/storage";
 import ResumeConfigModal from "../components/ResumeConfigModal";
 import { VOICES } from "../constants/voices";
+import { calculateTotalSessionCost, formatCost } from "../utils/costCalculator";
 
 const LOG_SOURCE = "SessionsPage";
 
@@ -161,14 +162,15 @@ const SessionsPage: React.FC<SessionsPageProps> = ({
               >
                 <div className="flex-1">
                   <h2
-                    className="text-xl font-semibold text-white truncate"
+                    className="text-xl font-semibold text-white break-words"
                     title={session.fileName}
                   >
                     {session.fileName}
                   </h2>
                   <p className="text-sm text-gray-400">
                     Created: {new Date(session.createdAt).toLocaleString()} |{" "}
-                    {session.slides.length} slides
+                    {session.slides.length} slides | Total Cost:{" "}
+                    {formatCost(calculateTotalSessionCost(session.usageReports))}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 self-end md:self-center">

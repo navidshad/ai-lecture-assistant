@@ -6,6 +6,7 @@ import { parseLecturePlanResponse } from "../services/lecturePlanParser";
 import { generateSessionId } from "../utils/id";
 import { MODEL_CONFIGS } from "../constants/modelCosts.static";
 import { logger } from "../services/logger";
+import { groupSlidesByAI } from "../services/slideGrouper";
 
 interface UseLecturePlanOptions {
   apiKey: string | null;
@@ -14,6 +15,7 @@ interface UseLecturePlanOptions {
   selectedModel: string;
   userCustomPrompt: string;
   markImportantSlides?: boolean;
+  groupSlides?: boolean;
 }
 
 interface UseLecturePlanResult {
@@ -43,6 +45,7 @@ export function useLecturePlan({
   selectedModel,
   userCustomPrompt,
   markImportantSlides = false,
+  groupSlides = false,
 }: UseLecturePlanOptions): UseLecturePlanResult {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
@@ -65,7 +68,8 @@ export function useLecturePlan({
 
         for (let i = 0; i < files.length; i += batchSize) {
           const batch = files.slice(i, i + batchSize);
-          setLoadingText(`Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(files.length / batchSize)}...`);
+          const phaseText = markImportantSlides ? "Analyzing content and extracting important slides" : "Analyzing content";
+          setLoadingText(`${phaseText} for batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(files.length / batchSize)}...`);
 
           const batchPromises = batch.map(async (file, idx) => {
             // Internal parsing and AI generation for EACH file
@@ -175,6 +179,21 @@ Slide 2:
           allUsageReports.push(res.usageReport);
         });
 
+        // Optional Grouping
+        let finalSlideGroups = undefined;
+        if (groupSlides && allSlides.length > 0) {
+          setLoadingText("Grouping slides by topical sections...");
+          try {
+            finalSlideGroups = await groupSlidesByAI({
+              slides: allSlides,
+              apiKey,
+              onReportUsage: (report) => allUsageReports.push(report)
+            });
+          } catch (e) {
+            logger.warn("useLecturePlan", "Failed to group slides preprocessing", e as any);
+          }
+        }
+
         const combinedGeneralInfo = results.length > 1
           ? `Combined lecture from ${results.length} files: ${fileNames.join(", ")}. ${results.map(r => r.generalInfo).join(" ")}`.substring(0, 1000)
           : (results[0]?.generalInfo || "");
@@ -196,6 +215,7 @@ Slide 2:
           transcript: [],
           currentSlideIndex: 0,
           lectureConfig,
+          slideGroups: finalSlideGroups,
           usageReports: allUsageReports,
         };
 
@@ -218,6 +238,7 @@ Slide 2:
       selectedModel,
       userCustomPrompt,
       markImportantSlides,
+      groupSlides
     ]
   );
 

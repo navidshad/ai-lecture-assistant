@@ -60,12 +60,12 @@ const IntroPage: React.FC<IntroPageProps> = ({
 
   const [groupSlides, setGroupSlides] = useLocalStorage<boolean>(
     GROUP_SLIDES_STORAGE_KEY,
-    false
+    true
   );
 
   const [markImportantSlides, setMarkImportantSlides] = useLocalStorage<boolean>(
     MARK_IMPORTANT_STORAGE_KEY,
-    false
+    true
   );
 
   const [forceTextOnly, setForceTextOnly] = useLocalStorage<boolean>(
@@ -99,6 +99,7 @@ const IntroPage: React.FC<IntroPageProps> = ({
       selectedModel,
       userCustomPrompt,
       markImportantSlides,
+      groupSlides,
     });
 
   const handleFileChange = useCallback(
@@ -242,7 +243,7 @@ const IntroPage: React.FC<IntroPageProps> = ({
             onChange={(e) => setGroupSlides(e.target.checked)}
             className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
           />
-          <span className="text-sm text-gray-300">Group slides by AI (UI only)</span>
+          <span className="text-sm text-gray-300">Organize slides into topical groups during analysis</span>
         </label>
       </div>
 
@@ -254,7 +255,7 @@ const IntroPage: React.FC<IntroPageProps> = ({
             onChange={(e) => setMarkImportantSlides(e.target.checked)}
             className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
           />
-          <span className="text-sm text-gray-300">Mark important slides by AI (UI only)</span>
+          <span className="text-sm text-gray-300">Identify and mark important slides during analysis</span>
         </label>
       </div>
 
