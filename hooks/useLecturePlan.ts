@@ -1,12 +1,12 @@
 import { useCallback, useState } from "react";
-import { LectureConfig, LectureSession, Slide, UsageReport } from "../types";
-import { parsePdf } from "../services/pdfUtils";
+import { ImageOptimizationSettings, LectureConfig, LectureSession, Slide, UsageReport } from "../types";
 import { getGenAI } from "../services/genaiClient";
 import { parseLecturePlanResponse } from "../services/lecturePlanParser";
 import { generateSessionId } from "../utils/id";
 import { MODEL_CONFIGS } from "../constants/modelCosts.static";
 import { logger } from "../services/logger";
 import { groupSlidesByAI } from "../services/slideGrouper";
+import { parsePdf } from "../services/pdfUtils";
 
 interface UseLecturePlanOptions {
   apiKey: string | null;
@@ -16,6 +16,8 @@ interface UseLecturePlanOptions {
   userCustomPrompt: string;
   markImportantSlides?: boolean;
   groupSlides?: boolean;
+  imageOptimization?: ImageOptimizationSettings;
+  forceTextOnly?: boolean;
 }
 
 interface UseLecturePlanResult {
@@ -46,6 +48,8 @@ export function useLecturePlan({
   userCustomPrompt,
   markImportantSlides = false,
   groupSlides = false,
+  imageOptimization,
+  forceTextOnly = false,
 }: UseLecturePlanOptions): UseLecturePlanResult {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
@@ -73,7 +77,7 @@ export function useLecturePlan({
 
           const batchPromises = batch.map(async (file, idx) => {
             // Internal parsing and AI generation for EACH file
-            const parsedSlides = await parsePdf(file);
+            const parsedSlides = await parsePdf(file, imageOptimization);
             const ai = getGenAI(apiKey);
             const base64Pdf = await fileToBase64(file);
 
@@ -203,6 +207,8 @@ Slide 2:
           voice: selectedVoice,
           model: selectedModel,
           prompt: userCustomPrompt,
+          imageOptimization,
+          forceTextOnly,
         };
 
         const newSession: LectureSession = {
@@ -238,7 +244,9 @@ Slide 2:
       selectedModel,
       userCustomPrompt,
       markImportantSlides,
-      groupSlides
+      groupSlides,
+      imageOptimization,
+      forceTextOnly
     ]
   );
 

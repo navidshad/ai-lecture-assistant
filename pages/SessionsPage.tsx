@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { LectureSession } from "../types";
+import { LectureSession, LectureSessionMetadata } from "../types";
 import { sessionManager } from "../services/db";
 import { BookOpen, Trash2, PlusCircle, BarChart3 } from "lucide-react";
 import { logger } from "../services/logger";
@@ -21,7 +21,7 @@ const SessionsPage: React.FC<SessionsPageProps> = ({
   onNewSession,
   onViewReport,
 }) => {
-  const [sessions, setSessions] = useState<LectureSession[]>([]);
+  const [sessions, setSessions] = useState<LectureSessionMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [resumeModalOpen, setResumeModalOpen] = useState(false);
   const [resumeSession, setResumeSession] = useState<LectureSession | null>(
@@ -31,8 +31,8 @@ const SessionsPage: React.FC<SessionsPageProps> = ({
 
   const loadSessions = async () => {
     try {
-      logger.log(LOG_SOURCE, "Loading sessions from DB.");
-      const savedSessions = await sessionManager.getAllSessions();
+      logger.log(LOG_SOURCE, "Loading session metadata from DB.");
+      const savedSessions = await sessionManager.getAllSessionsMetadata();
       setSessions(savedSessions);
     } catch (error) {
       logger.error(LOG_SOURCE, "Failed to load sessions.", error);
@@ -78,9 +78,21 @@ const SessionsPage: React.FC<SessionsPageProps> = ({
     }
   };
 
-  const openResumeModal = (session: LectureSession) => {
-    setResumeSession(session);
-    setResumeModalOpen(true);
+  const openResumeModal = async (sessionId: string) => {
+    try {
+      setLoading(true);
+      const fullSession = await sessionManager.getSession(sessionId);
+      if (fullSession) {
+        setResumeSession(fullSession);
+        setResumeModalOpen(true);
+      } else {
+        alert("Could not load session data.");
+      }
+    } catch (e) {
+      logger.error(LOG_SOURCE, "Failed to load full session for resume", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const LANGUAGE_STORAGE_KEY = "ai-lecture-assistant-language";
@@ -105,9 +117,12 @@ const SessionsPage: React.FC<SessionsPageProps> = ({
     try {
       // Persist to DB
       await sessionManager.updateSession(updated);
-      // Update local list to reflect changes
+      // Update local list to reflect changes (metadata only)
       setSessions((prev) =>
-        prev.map((s) => (s.id === updated.id ? updated : s))
+        prev.map((s) => (s.id === updated.id ? {
+          ...s,
+          lectureConfig: updated.lectureConfig
+        } : s))
       );
       // Persist preferences to localStorage for a consistent experience
       setLocalStorage(LANGUAGE_STORAGE_KEY, updated.lectureConfig.language);
@@ -120,6 +135,22 @@ const SessionsPage: React.FC<SessionsPageProps> = ({
     } catch (e) {
       logger.error(LOG_SOURCE, "Failed to apply resume configuration", e);
       alert("Failed to update session configuration. Please try again.");
+    }
+  };
+
+  const handleViewReport = async (sessionId: string) => {
+    try {
+      setLoading(true);
+      const fullSession = await sessionManager.getSession(sessionId);
+      if (fullSession) {
+        onViewReport(fullSession);
+      } else {
+        alert("Could not load session data.");
+      }
+    } catch (e) {
+      logger.error(LOG_SOURCE, "Failed to load full session for report", e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -169,13 +200,13 @@ const SessionsPage: React.FC<SessionsPageProps> = ({
                   </h2>
                   <p className="text-sm text-gray-400">
                     Created: {new Date(session.createdAt).toLocaleString()} |{" "}
-                    {session.slides.length} slides | Total Cost:{" "}
+                    {session.slidesCount} slides | Total Cost:{" "}
                     {formatCost(calculateTotalSessionCost(session.usageReports))}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 self-end md:self-center">
                   <button
-                    onClick={() => openResumeModal(session)}
+                    onClick={() => openResumeModal(session.id)}
                     className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors"
                     title="Continue Lecture"
                   >
@@ -183,7 +214,7 @@ const SessionsPage: React.FC<SessionsPageProps> = ({
                     <span>Continue</span>
                   </button>
                   <button
-                    onClick={() => onViewReport(session)}
+                    onClick={() => handleViewReport(session.id)}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 text-blue-400 font-semibold rounded-lg hover:bg-blue-600/30 transition-colors border border-blue-500/30"
                     title="View Usage Report"
                   >

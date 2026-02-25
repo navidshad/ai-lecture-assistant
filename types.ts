@@ -13,8 +13,8 @@ export interface Slide extends ParsedSlide {
 }
 
 export interface ImageOptimizationSettings {
-  maxDimension: number; // e.g., 768, 512, 256
-  grayscale: boolean;
+  maxDimension?: number; // e.g., 768, 512, 256
+  grayscale?: boolean;
 }
 
 export interface LectureConfig {
@@ -54,6 +54,10 @@ export interface LectureSession {
   slideGroups?: SlideGroup[];
   usageReports: UsageReport[];
 }
+
+export type LectureSessionMetadata = Omit<LectureSession, 'slides' | 'transcript'> & {
+  slidesCount: number;
+};
 
 export enum LectureSessionState {
   IDLE = "IDLE",

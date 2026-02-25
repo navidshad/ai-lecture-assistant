@@ -3,9 +3,15 @@ import { ParsedSlide } from '../types';
 // This is to inform TypeScript that pdfjsLib is available globally from the script tag in index.html
 declare const pdfjsLib: any;
 
-export const parsePdf = async (file: File): Promise<ParsedSlide[]> => {
+export interface ParseOptions {
+  maxDimension?: number;
+  grayscale?: boolean;
+}
+
+export const parsePdf = async (file: File, options: ParseOptions = {}): Promise<ParsedSlide[]> => {
   const fileReader = new FileReader();
-  
+  const { maxDimension = 1600, grayscale = false } = options;
+
   return new Promise((resolve, reject) => {
     fileReader.onload = async (event) => {
       if (!event.target?.result) {
@@ -13,7 +19,7 @@ export const parsePdf = async (file: File): Promise<ParsedSlide[]> => {
       }
 
       const typedarray = new Uint8Array(event.target.result as ArrayBuffer);
-      
+
       try {
         const pdf = await pdfjsLib.getDocument(typedarray).promise;
         const slides: ParsedSlide[] = [];
@@ -25,11 +31,11 @@ export const parsePdf = async (file: File): Promise<ParsedSlide[]> => {
 
           // Adaptive scaling to improve small-text readability while bounding image size
           const baseViewport = page.getViewport({ scale: 1.0 });
-          const IMAGE_MAX_SIDE_PX = 2200; // longest side target in px (cap bandwidth)
+          const IMAGE_MAX_SIDE_PX = maxDimension;
           const longestSide = Math.max(baseViewport.width, baseViewport.height);
           const scale = Math.min(3, Math.max(1.5, IMAGE_MAX_SIDE_PX / longestSide));
           const viewport = page.getViewport({ scale });
-          
+
           // Create canvas to render page
           const canvas = document.createElement('canvas');
           const context = canvas.getContext('2d');
@@ -37,9 +43,14 @@ export const parsePdf = async (file: File): Promise<ParsedSlide[]> => {
             canvas.height = viewport.height;
             canvas.width = viewport.width;
 
+            if (grayscale) {
+              context.filter = 'grayscale(100%)';
+            }
+
             try {
               await page.render({ canvasContext: context, viewport }).promise;
-              imageDataUrl = canvas.toDataURL('image/png');
+              // Use JPEG with 0.8 quality to significantly reduce base64 size (approx 5-10x smaller than PNG)
+              imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
             } catch (renderErr) {
               console.warn("Failed to render page", i, renderErr);
             }
