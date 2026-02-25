@@ -70,11 +70,19 @@ export function useLecturePlan({
 
         const prompt = `You are an expert instructional designer. Analyze the provided PDF and return ONLY the following lines in plain text (no markdown, no extra commentary).
 
+${
+  userCustomPrompt
+    ? `IMPORTANT CONTEXT: The user has provided the following preferences for this lecture: "${userCustomPrompt}". When identifying important slides, prioritize content that aligns with these preferences.`
+    : ""
+}
+
 - general info: A brief overview of the entire presentation in 1–2 sentences, MAX 200 characters total.
 - Slide N: The main message of slide N in exactly 1 short sentence, MAX 90 characters. Repeat for all slides.
 ${
   markImportantSlides
-    ? `- If a slide is crucial to learning the lecture (mandatory for understanding and likely exam relevance), mark the header with an asterisk after the number: "Slide N *:"`
+    ? `- If a slide is crucial to learning the lecture (mandatory for understanding and likely exam relevance${
+        userCustomPrompt ? " based on user preferences" : ""
+      }), mark the header with an asterisk after the number: "Slide N *:"`
     : ``
 }
 
@@ -86,7 +94,9 @@ STRICT REQUIREMENTS:
 - Do NOT use filler/openers such as: "in this slide", "this slide shows", "on slide N", "we will", "let’s", "here we", "the following"; write the main message directly.
 ${
   markImportantSlides
-    ? `- IMPORTANT: If a slide is important (i.e., mandatory to review to learn the lecture and likely important for the exam), put exactly one asterisk (*) after the slide number in the header (e.g., "Slide 2 *:"). Otherwise keep "Slide N:" with no asterisk.`
+    ? `- IMPORTANT: If a slide is important (i.e., mandatory to review to learn the lecture and likely important for the exam${
+        userCustomPrompt ? " based on user preferences" : ""
+      }), put exactly one asterisk (*) after the slide number in the header (e.g., "Slide 2 *:"). Otherwise keep "Slide N:" with no asterisk.`
     : ``
 }
 
