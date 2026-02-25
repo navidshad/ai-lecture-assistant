@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, X, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Volume2, X, Trash2, CheckCircle, AlertTriangle, Zap } from 'lucide-react';
+import { ImageOptimizationSettings } from '../types';
+import OptimizationSettings from './Lecture/OptimizationSettings';
 
 interface ConfigModalProps {
   isOpen: boolean;
@@ -10,9 +12,22 @@ interface ConfigModalProps {
   currentApiKey: string | null;
   onApiKeySave: (key: string) => void;
   onApiKeyRemove: () => void;
+  imageOptimization: ImageOptimizationSettings;
+  onImageOptimizationChange: (settings: ImageOptimizationSettings) => void;
 }
 
-const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, selectedVoice, onVoiceChange, voices, currentApiKey, onApiKeySave, onApiKeyRemove }) => {
+const ConfigModal: React.FC<ConfigModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  selectedVoice, 
+  onVoiceChange, 
+  voices, 
+  currentApiKey, 
+  onApiKeySave, 
+  onApiKeyRemove,
+  imageOptimization,
+  onImageOptimizationChange
+}) => {
   const [apiKeyInput, setApiKeyInput] = useState('');
 
   useEffect(() => {
@@ -61,7 +76,7 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, selectedVoic
                 className="w-full appearance-none rounded-lg border border-gray-600 bg-gray-700 py-2.5 pl-10 pr-4 text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {voices.map(voice => (
-                  <option key={voice.name} value={voice.name}>{voice.description}</option>
+                  <option key={voice.name} value={voice.name}>{`${voice.name} — ${voice.description}`}</option>
                 ))}
               </select>
             </div>
@@ -116,6 +131,23 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, selectedVoic
                   Your custom API key is stored in your browser's local storage.
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* Image Optimization Section */}
+          <div className="border-t border-gray-700 pt-6">
+            <div className="flex items-center gap-2 mb-4 text-sm font-medium text-gray-400">
+              <Zap className="h-4 w-4 text-yellow-500" />
+              <span>Token Savings & Performance</span>
+            </div>
+            <div className="bg-gray-900/40 rounded-xl p-4 border border-gray-700/50">
+              <OptimizationSettings 
+                settings={imageOptimization} 
+                onChange={onImageOptimizationChange} 
+              />
+              <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">
+                Reducing resolution and using BW mode significantly lowers token consumption for long lectures with many slides.
+              </p>
             </div>
           </div>
         </div>

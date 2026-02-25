@@ -5,13 +5,14 @@ import ToastContainer from './components/ToastContainer';
 import IntroPage from './pages/IntroPage';
 import LecturePage from './pages/LecturePage';
 import SessionsPage from './pages/SessionsPage';
+import UsageReportPage from './pages/UsageReportPage';
 import { useApiKey } from './hooks/useApiKey';
 import { Loader2 } from 'lucide-react';
 import { logger } from './services/logger';
 
 const LOG_SOURCE = 'App';
 
-type AppView = 'intro' | 'sessions' | 'lecture';
+type AppView = 'intro' | 'sessions' | 'lecture' | 'report';
 
 function AppContent() {
   const { apiKey, setApiKey, clearApiKey, isLoaded } = useApiKey();
@@ -37,6 +38,12 @@ function AppContent() {
     setView('sessions'); // After ending, show the list of sessions
   }, []);
 
+  const handleViewReport = useCallback((session: LectureSession) => {
+    logger.log(LOG_SOURCE, 'Viewing usage report.', { sessionId: session.id });
+    setActiveSession(session);
+    setView('report');
+  }, []);
+
 
   useEffect(() => {
     logger.log(LOG_SOURCE, 'AppContent mounted.');
@@ -56,6 +63,7 @@ function AppContent() {
       <LecturePage 
         session={activeSession}
         onEndSession={handleEndSession} 
+        onViewReport={() => setView('report')}
         apiKey={apiKey}
       />
     );
@@ -66,8 +74,18 @@ function AppContent() {
           <SessionsPage
               onContinueSession={handleContinueSession}
               onNewSession={() => setView('intro')}
+              onViewReport={handleViewReport}
           />
       );
+  }
+
+  if (view === 'report' && activeSession) {
+    return (
+      <UsageReportPage 
+        session={activeSession}
+        onBack={() => setView('sessions')}
+      />
+    );
   }
 
   return (

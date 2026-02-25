@@ -1,186 +1,195 @@
-import React, { useEffect } from 'react';
-import { CanvasBlock } from '../types';
+import React, { useState, useEffect, useRef } from "react";
+import { CanvasBlock } from "../types";
+import MarkdownRenderer from "./MarkdownRenderer";
+import { fixMarkdownContent } from "../services/genaiClient";
+import { useToast } from "../hooks/useToast";
+import { useApiKey } from "../hooks/useApiKey";
+import { Loader2, Copy, Check } from "lucide-react";
+import SelectionTool from "./Selection/SelectionTool";
+import { captureElementAsImage, cropImage } from "../utils/imageUtils";
 
-// Let TypeScript know that 'mermaid' is available on the window object
-declare const mermaid: any;
+interface CanvasViewerProps {
+  content: CanvasBlock[];
+  isRectangleToolActive?: boolean;
+  onSelectionAdd?: (imageDataUrl: string) => void;
+  onRectangleToolDeactivate?: () => void;
+}
 
-const parseMarkdown = (text: string): string => {
-  if (!text) return '';
+const CanvasViewer: React.FC<CanvasViewerProps> = ({
+  content,
+  isRectangleToolActive = false,
+  onSelectionAdd,
+  onRectangleToolDeactivate,
+}) => {
+  const [contentBlocks, setContentBlocks] = useState<CanvasBlock[]>(content);
+  const [isFixing, setIsFixing] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const { showToast } = useToast();
+  const { apiKey } = useApiKey();
+  const contentRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  let html = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-    
-  const blocks: string[] = [];
-  
-  // Extract and process code blocks
-  html = html.replace(/```([\s\S]*?)```/gim, (match) => {
-    const codeContent = match.substring(3, match.length - 3).trim();
-    blocks.push(`<pre class="bg-gray-900 p-4 rounded-md overflow-x-auto text-sm my-4"><code class="font-mono text-white">${codeContent}</code></pre>`);
-    return `__BLOCK__${blocks.length - 1}__`;
-  });
+  const handleSelectionAdd = async (bounds: { x: number; y: number; width: number; height: number }) => {
+    if (!contentRef.current || !containerRef.current || !onSelectionAdd) return;
 
-  // Extract and process lists
-  html = html.replace(/^(?:-|\*|\+) .*(?:\n(?:-|\*|\+) .*)*(?:\n|$)/gim, (match) => {
-    const items = match.trim().split('\n').map(item => `<li class="ml-6 list-disc">${item.substring(2)}</li>`).join('');
-    blocks.push(`<ul class="space-y-1">${items}</ul>`);
-    return `__BLOCK__${blocks.length - 1}__`;
-  });
-
-  // Headings
-  html = html.replace(/^### (.*$)/gim, '<h3 class="text-xl font-bold mb-2">$1</h3>');
-  html = html.replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold mb-3">$1</h2>');
-  html = html.replace(/^# (.*$)/gim, '<h1 class="text-3xl font-bold mb-4">$1</h1>');
-  
-  // Bold, Italic, Inline Code
-  html = html.replace(/\*\*(.*?)\*\*/gim, '<strong class="font-semibold">$1</strong>');
-  html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>');
-  html = html.replace(/`(.*?)`/gim, '<code class="bg-gray-900 px-1 py-0.5 rounded-sm text-sm font-mono">$1</code>');
-
-  // Replace remaining newlines with <br>
-  html = html.replace(/\n/g, '<br />');
-  
-  // Re-insert the processed blocks
-  html = html.replace(/__BLOCK__(\d+)__/g, (match, p1) => blocks[parseInt(p1, 10)]);
-
-  return html;
-};
-
-const parseTable = (markdown: string): string => {
-  if (!markdown) return '';
-  const lines = markdown.trim().split('\n').map(l => l.trim()).filter(Boolean);
-  
-  if (lines.length < 2) return `<p class="text-red-400">Invalid table format.</p>`;
-  
-  const isTableRow = (line: string) => line.startsWith('|') && line.endsWith('|');
-
-  const headerLine = lines[0];
-  const separatorLine = lines[1];
-  const rowLines = lines.slice(2);
-
-  if (!isTableRow(headerLine) || !separatorLine.match(/^ *\| *[:-]+ *\|/)) {
-    return `<p class="text-red-400">Invalid table format: Missing or malformed header or separator line.</p>`;
-  }
-  
-  const headers = headerLine.split('|').slice(1, -1).map(h => h.trim());
-
-  const thead = `<thead><tr class="bg-gray-700/50">${headers.map(h => `<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">${h}</th>`).join('')}</tr></thead>`;
-
-  const tbody = `<tbody>${rowLines.map(row => {
-    if (!isTableRow(row)) return ''; // Skip malformed rows
-    const cells = row.split('|').slice(1, -1).map(c => c.trim());
-    
-    while (cells.length < headers.length) {
-      cells.push('');
+    try {
+      // First capture the entire canvas content as image
+      const canvasImage = await captureElementAsImage(contentRef.current);
+      
+      // Then crop the selected area
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const croppedImage = await cropImage(
+        canvasImage,
+        bounds,
+        containerRect.width,
+        containerRect.height
+      );
+      onSelectionAdd(croppedImage);
+    } catch (error) {
+      console.error('Failed to capture and crop canvas:', error);
+      showToast('Failed to capture selection', 'error');
     }
-    return `<tr class="border-t border-gray-700 hover:bg-gray-800/50">${cells.slice(0, headers.length).map(c => `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-200">${c}</td>`).join('')}</tr>`;
-  }).join('')}</tbody>`;
+  };
 
-  return `<div class="w-full overflow-x-auto rounded-lg border border-gray-700"><table class="min-w-full divide-y divide-gray-700">${thead}${tbody}</table></div>`;
-};
-
-const prepareDiagramContent = (content: string): string => {
-  const trimmedContent = content.trim();
-  const diagramTypes = [
-    'graph', 
-    'flowchart', 
-    'sequenceDiagram', 
-    'classDiagram', 
-    'stateDiagram-v2', 
-    'stateDiagram',
-    'erDiagram', 
-    'journey', 
-    'gantt', 
-    'pie', 
-    'quadrantChart', 
-    'requirementDiagram', 
-    'gitGraph', 
-    'mindmap', 
-    'timeline', 
-    'C4Context'
-  ];
-  
-  const startsWithDiagramType = diagramTypes.some(type => trimmedContent.startsWith(type));
-
-  if (startsWithDiagramType) {
-    return trimmedContent;
-  }
-
-  // If no diagram type is specified, default to flowchart (graph TD)
-  return `graph TD\n${trimmedContent}`;
-};
-
-
-const CanvasViewer: React.FC<{ content: CanvasBlock[] }> = ({ content }) => {
+  // Sync contentBlocks when content prop changes
   useEffect(() => {
-    if (typeof mermaid === 'undefined') return;
-
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: 'dark',
-      fontFamily: '"Inter", sans-serif',
-      securityLevel: 'loose',
-    });
-
-    if (content && content.some(block => block.type === 'diagram')) {
-      try {
-        mermaid.run({
-          nodes: document.querySelectorAll('.mermaid-diagram-render'),
-        });
-      } catch (e) {
-        console.error("Mermaid.js rendering error:", e);
-      }
-    }
+    setContentBlocks(content);
   }, [content]);
 
-  if (!content || content.length === 0) {
+  const handleFixRendering = async () => {
+    if (!apiKey) {
+      showToast("API key is required to fix markdown rendering", "error");
+      return;
+    }
+
+    setIsFixing(true);
+    try {
+      // Join all blocks' content with double newline separator
+      const markdown = contentBlocks.map((block) => block.content).join("\n\n");
+
+      const { content: fixedMarkdown } = await fixMarkdownContent(
+        markdown,
+        apiKey
+      );
+
+      // Replace all blocks with single fixed block
+      setContentBlocks([{ type: "markdown", content: fixedMarkdown }]);
+    } catch (error) {
+      console.error("Failed to fix markdown:", error);
+      showToast(
+        `Failed to fix markdown: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        "error"
+      );
+    } finally {
+      setIsFixing(false);
+    }
+  };
+
+  const handleCopyMarkdown = async () => {
+    try {
+      // Join all blocks' content with double newline separator
+      const markdown = contentBlocks.map((block) => block.content).join("\n\n");
+      
+      await navigator.clipboard.writeText(markdown);
+      setIsCopied(true);
+      
+      // Reset copied state after 2 seconds
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy markdown:", error);
+      showToast("Failed to copy markdown to clipboard", "error");
+    }
+  };
+
+  if (!contentBlocks || contentBlocks.length === 0) {
     return (
       <div className="relative w-full h-full bg-black rounded-lg shadow-2xl flex items-center justify-center overflow-auto border border-gray-700 p-6">
         <div className="text-center text-gray-500 w-full self-center">
-            <h3 className="text-2xl font-bold">Canvas</h3>
-            <p className="mt-2">The AI lecturer will provide extra information here when you ask for it.</p>
+          <h3 className="text-2xl font-bold">Canvas</h3>
+          <p className="mt-2">
+            The AI lecturer will provide extra information here when you ask for
+            it.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="relative w-full h-full bg-black rounded-lg shadow-2xl flex flex-col items-start justify-start overflow-auto border border-gray-700 p-6 space-y-4">
-      {content.map((block, index) => {
-        switch (block.type) {
-          case 'markdown':
-            return (
-              <div
-                key={index}
-                className="text-left text-gray-200 w-full"
-                dangerouslySetInnerHTML={{ __html: parseMarkdown(block.content) }}
-              />
-            );
-          case 'diagram':
-            return (
-              <div key={index} className="mermaid-diagram-render w-full flex justify-center bg-gray-800 rounded-lg p-4">
-                {prepareDiagramContent(block.content)}
-              </div>
-            );
-          case 'ascii':
-            return (
-              <pre key={index} className="bg-gray-900 p-4 rounded-md overflow-x-auto text-sm w-full">
-                <code className="font-mono text-white whitespace-pre">{block.content}</code>
-              </pre>
-            );
-          case 'table':
-            return (
-              <div
-                key={index}
-                className="text-left text-gray-200 w-full"
-                dangerouslySetInnerHTML={{ __html: parseTable(block.content) }}
-              />
-            );
-          default:
-            return null;
-        }
-      })}
+    <div className="relative w-full h-full bg-black rounded-lg shadow-2xl flex flex-col border border-gray-700 overflow-hidden">
+      {/* Header with note and buttons */}
+      <div className="w-full flex justify-between items-center p-4 border-b border-gray-700 flex-shrink-0">
+        <div className="text-sm text-gray-400">
+          <span className="font-medium text-gray-300">Tip:</span> Use the Fix
+          button to repair malformed markdown, unclosed code fences, broken math
+          syntax, or diagram formatting issues.
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCopyMarkdown}
+            className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md text-sm font-medium transition-colors flex-shrink-0"
+            title="Copy markdown content"
+          >
+            {isCopied ? (
+              <>
+                <Check className="w-4 h-4" />
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4" />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleFixRendering}
+            disabled={isFixing || !apiKey}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-md text-sm font-medium transition-colors flex-shrink-0"
+          >
+            {isFixing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Fixing...</span>
+              </>
+            ) : (
+              <span>Fix rendering</span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Content area */}
+      <div
+        ref={containerRef}
+        className="relative flex-1 w-full overflow-hidden min-h-0"
+      >
+        <div
+          ref={contentRef}
+          className="w-full h-full px-6 py-4 overflow-y-auto overflow-x-hidden"
+          dir="auto"
+        >
+          {contentBlocks.map((block, index) => (
+            <div key={index} className="text-gray-200 w-full">
+              <MarkdownRenderer markdown={block.content} />
+            </div>
+          ))}
+        </div>
+        
+        {/* Selection Tool */}
+        {isRectangleToolActive && onSelectionAdd && (
+          <SelectionTool
+            isActive={isRectangleToolActive}
+            containerRef={containerRef}
+            onSelectionAdd={handleSelectionAdd}
+            onDeactivate={onRectangleToolDeactivate}
+          />
+        )}
+      </div>
     </div>
   );
 };
