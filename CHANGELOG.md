@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0](https://github.com/navidshad/ai-lecture-assistant/compare/v1.1.0...v1.2.0) (2026-02-25)
+
+
+### Features
+
+* Implement PDF image optimization with JPEG conversion and introduce session metadata loading for improved performance. ([7db965c](https://github.com/navidshad/ai-lecture-assistant/commit/7db965c66444276037c20c5eec0acf08417ff490))
+
+
+### Performance Improvements
+
+* Memoize various UI components and improve markdown rendering for images and inline code blocks. ([0288768](https://github.com/navidshad/ai-lecture-assistant/commit/028876813421b2725ed9f4184c37e6dcc3f2a12b))
+
 ## [1.1.0](https://github.com/navidshad/ai-lecture-assistant/compare/v1.0.0...v1.1.0) (2026-02-25)
 
 
