@@ -64,7 +64,7 @@ const FileUploadBox: React.FC<FileUploadBoxProps> = ({
               </span>{" "}
               or drag and drop
             </p>
-            <p className="text-sm text-gray-500">PDF files only</p>
+            <p className="text-sm text-gray-500">PDF files only (multiple supported)</p>
           </>
         )}
       </div>
@@ -72,6 +72,7 @@ const FileUploadBox: React.FC<FileUploadBoxProps> = ({
         id="pdf-upload"
         type="file"
         accept=".pdf"
+        multiple
         className="sr-only"
         onChange={onFileChange}
         disabled={isLoading || disabled}

@@ -9,6 +9,7 @@ export interface Slide extends ParsedSlide {
   summary: string;
   canvasContent?: CanvasBlock[];
   isImportant?: boolean;
+  originFile?: string;
 }
 
 export interface ImageOptimizationSettings {
@@ -23,6 +24,7 @@ export interface LectureConfig {
   prompt?: string;
   imageOptimization?: ImageOptimizationSettings;
   forceTextOnly?: boolean;
+  batchSize?: number;
 }
 
 export interface TokenUsage {
@@ -42,6 +44,7 @@ export interface UsageReport {
 export interface LectureSession {
   id: string;
   fileName: string;
+  fileNames: string[];
   createdAt: number;
   slides: Slide[];
   generalInfo: string;

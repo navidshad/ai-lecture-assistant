@@ -472,7 +472,7 @@ const LecturePage: React.FC<LecturePageProps> = ({
   }, [currentSlideIndex, previous]);
 
   const SLIDE_CHANGE_DEBOUNCE_MS = 200;
-  const slideChangeTimerRef = useRef<number | undefined>();
+  const slideChangeTimerRef = useRef<number | undefined>(undefined);
   const handleSelectSlide = useCallback(
     (index: number) => {
       logger.debug(LOG_SOURCE, `handleSelectSlide called for index ${index}.`);
@@ -572,7 +572,9 @@ const LecturePage: React.FC<LecturePageProps> = ({
     const link = document.createElement("a");
     link.href = url;
 
-    const baseFileName = session.fileName.replace(/\.pdf$/i, "");
+    const baseFileName = session.fileNames && session.fileNames.length > 1
+      ? `combined-lecture-${session.fileNames.length}-files`
+      : session.fileName.replace(/\.pdf$/i, "");
     link.download = `${baseFileName}-transcript.txt`;
 
     document.body.appendChild(link);
@@ -869,6 +871,8 @@ const LecturePage: React.FC<LecturePageProps> = ({
         onApiKeyRemove={() => {}}
         imageOptimization={imageOptimization}
         onImageOptimizationChange={setImageOptimization}
+        batchSize={session.lectureConfig.batchSize || 3}
+        onBatchSizeChange={() => {}} // Batch size change not relevant mid-session
       />
     </div>
   );

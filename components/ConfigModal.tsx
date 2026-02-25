@@ -14,6 +14,8 @@ interface ConfigModalProps {
   onApiKeyRemove: () => void;
   imageOptimization: ImageOptimizationSettings;
   onImageOptimizationChange: (settings: ImageOptimizationSettings) => void;
+  batchSize: number;
+  onBatchSizeChange: (size: number) => void;
 }
 
 const ConfigModal: React.FC<ConfigModalProps> = ({ 
@@ -26,7 +28,9 @@ const ConfigModal: React.FC<ConfigModalProps> = ({
   onApiKeySave, 
   onApiKeyRemove,
   imageOptimization,
-  onImageOptimizationChange
+  onImageOptimizationChange,
+  batchSize,
+  onBatchSizeChange
 }) => {
   const [apiKeyInput, setApiKeyInput] = useState('');
 
@@ -53,15 +57,15 @@ const ConfigModal: React.FC<ConfigModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-gray-900 bg-opacity-80 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={onClose}>
-      <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl p-8 max-w-md w-full text-white" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-6">
+      <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl p-8 max-w-md w-full text-white max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-6 flex-shrink-0">
           <h2 className="text-2xl font-bold">Settings</h2>
           <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors">
             <X className="h-6 w-6" />
           </button>
         </div>
         
-        <div className="space-y-8">
+        <div className="space-y-8 overflow-y-auto pr-2 flex-grow">
           {/* Voice Selection */}
           <div>
             <label htmlFor="voice-select-modal" className="block text-sm font-medium text-gray-400 mb-2">
@@ -150,9 +154,32 @@ const ConfigModal: React.FC<ConfigModalProps> = ({
               </p>
             </div>
           </div>
+
+          {/* Batch Processing Size */}
+          <div className="border-t border-gray-700 pt-6">
+            <label htmlFor="batch-size" className="block text-sm font-medium text-gray-400 mb-2">
+              Batch Processing Size (Parallel Files)
+            </label>
+            <div className="flex items-center gap-4">
+              <input
+                id="batch-size"
+                type="range"
+                min="1"
+                max="10"
+                step="1"
+                value={batchSize}
+                onChange={(e) => onBatchSizeChange(parseInt(e.target.value, 10))}
+                className="flex-grow h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              />
+              <span className="w-8 text-center font-bold text-blue-400">{batchSize}</span>
+            </div>
+            <p className="text-[11px] text-gray-500 mt-2">
+              Controls how many PDF files are processed in parallel. Higher values are faster but may hit API limits.
+            </p>
+          </div>
         </div>
 
-        <div className="mt-8 text-right">
+        <div className="mt-8 text-right flex-shrink-0">
            <button
             onClick={onClose}
             className="px-6 py-2 bg-gray-700 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors"
